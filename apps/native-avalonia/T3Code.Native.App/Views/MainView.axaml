@@ -69,7 +69,13 @@
         <Border Background="#181b21" Padding="12">
         <Grid RowDefinitions="Auto,Auto,*">
             <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,12">
-              <ComboBox ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" HorizontalAlignment="Stretch" />
+              <ComboBox ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate DataType="vm:ModelSelectionItem">
+                    <TextBlock Text="{Binding Label}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
               <ComboBox ItemsSource="{Binding RuntimeModes}" SelectedItem="{Binding SelectedRuntimeMode}" HorizontalAlignment="Stretch" />
               <ComboBox ItemsSource="{Binding InteractionModes}" SelectedItem="{Binding SelectedInteractionMode}" HorizontalAlignment="Stretch" />
             </StackPanel>

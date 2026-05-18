@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 using Avalonia.Threading;
 using T3Code.Native.Client.Auth;
 using T3Code.Native.Client.Commands;
+using T3Code.Native.Client.Config;
 using T3Code.Native.Client.Discovery;
 using T3Code.Native.Client.Shell;
 using T3Code.Native.Client.Thread;
@@ -61,15 +62,13 @@ public partial class MainViewModel : ViewModelBase
         new("system", "The desktop backend remains the source of truth for projects, threads, diffs, git, and terminals."),
     ];
 
-    public ObservableCollection<string> Models { get; } =
+    public ObservableCollection<ModelSelectionItem> Models { get; } =
     [
-        "gpt-5.5",
-        "gpt-5.4",
-        "claude-sonnet-4.5",
+        new("Codex / GPT-5.5", "codex", "gpt-5.5"),
     ];
 
     [ObservableProperty]
-    private string _selectedModel = "gpt-5.5";
+    private ModelSelectionItem? _selectedModel = new("Codex / GPT-5.5", "codex", "gpt-5.5");
 
     public ObservableCollection<string> RuntimeModes { get; } =
     [
@@ -79,7 +78,7 @@ public partial class MainViewModel : ViewModelBase
     ];
 
     [ObservableProperty]
-    private string _selectedRuntimeMode = "default";
+    private string _selectedRuntimeMode = "full-access";
 
     public ObservableCollection<string> InteractionModes { get; } =
     [
@@ -276,12 +275,40 @@ public partial class MainViewModel : ViewModelBase
         );
         await refreshingSession.ConnectAsync();
         var shell = new NativeShellClient(_shellSession);
+        await LoadServerConfigAsync();
         _shellSubscription = await shell.SubscribeShellAsync(update =>
         {
             Dispatcher.UIThread.Post(() => ApplyShellUpdate(update));
             return Task.CompletedTask;
         });
         Status = "Paired. Syncing projects and threads from orchestration.subscribeShell...";
+    }
+
+    private async Task LoadServerConfigAsync()
+    {
+        if (_shellSession is null)
+        {
+            return;
+        }
+
+        var previous = SelectedModel;
+        var options = await new NativeServerConfigClient(_shellSession).GetModelOptionsAsync();
+        if (options.Count == 0)
+        {
+            return;
+        }
+
+        Models.Clear();
+        foreach (var option in options)
+        {
+            Models.Add(new ModelSelectionItem(option.Label, option.InstanceId, option.Model));
+        }
+
+        SelectedModel =
+            Models.FirstOrDefault(model =>
+                model.InstanceId == previous?.InstanceId && model.Model == previous.Model
+            )
+            ?? Models.FirstOrDefault();
     }
 
     private async Task StopShellSubscriptionAsync()
@@ -444,8 +471,8 @@ public partial class MainViewModel : ViewModelBase
     private object BuildSelectedModelSelection() =>
         new
         {
-            instanceId = "codex",
-            model = SelectedModel,
+            instanceId = SelectedModel?.InstanceId ?? "codex",
+            model = SelectedModel?.Model ?? "gpt-5.5",
         };
 
     partial void OnSelectedBackendChanged(DiscoveredBackendItem? value)
@@ -470,6 +497,8 @@ public sealed record DiscoveredBackendItem(string BaseUrl, string Source, string
 public sealed record ProjectShellItem(string Id, string Title, string Detail);
 
 public sealed record ThreadShellItem(string Id, string Title, string Detail);
+
+public sealed record ModelSelectionItem(string Label, string InstanceId, string Model);
 
 public sealed record ChatLineItem(
     string Speaker,
