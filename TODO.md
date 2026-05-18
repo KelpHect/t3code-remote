@@ -220,7 +220,10 @@ code and tests only.
       transport.
       Acceptance: tests replay captured frames and fail with method/envelope
       names when current backend shapes change.
-- [ ] Keep private wire parsing out of Vue components and stores.
+- [x] Keep private wire parsing out of Vue components and stores.
+      Evidence: `apps/mobile/tests/unit/wsBoundary.spec.ts` scans mobile source
+      files outside `src/client/ws/` and fails if they import the private
+      Effect RPC transport or match private `_tag` wire envelopes directly.
       Acceptance: UI consumes app-owned DTOs only; lint or tests guard against
       importing transport internals into views.
 
