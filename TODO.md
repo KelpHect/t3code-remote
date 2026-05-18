@@ -133,8 +133,8 @@ Purpose: keep the native app work validated against the existing repository with
 
 - [x] Root format, lint, typecheck, and tests passed after native scaffold.
       Evidence: `bun fmt`, `bun lint`, `bun typecheck`, and `TURBO_ENV_MODE=loose LANG=C LC_ALL=C LANGUAGE=C bun run test` passed on 2026-05-18.
-- [ ] Add C-locale guidance to CI or test scripts if localized Git stderr can affect shared environments.
-      Acceptance: native app documentation and agent instructions clearly preserve the required C-locale root test command; no existing test scripts are changed for native support.
+- [x] Preserve C-locale guidance for root tests without changing existing scripts.
+      Evidence: `AGENTS.md` documents `TURBO_ENV_MODE=loose LANG=C LC_ALL=C LANGUAGE=C bun run test`; no existing test scripts were changed for native support.
 
 ## P6 - Release And Operations
 
@@ -146,8 +146,8 @@ Purpose: define how native artifacts ship without changing existing Electron/ser
       Acceptance: debug APK, release APK/AAB, signing inputs, versioning, and artifact retention are documented.
 - [ ] Keep native desktop scoped as a client for the existing backend.
       Acceptance: plan states how the native desktop client connects, pairs, and reuses the same compatibility client/runtime as mobile without changing existing backend/web/desktop code.
-- [ ] Keep Avalonia release automation separate from existing Electron scripts until a migration plan exists.
-      Acceptance: no existing `dist:desktop:*` behavior changes accidentally package Avalonia output.
+- [x] Keep Avalonia release automation separate from existing Electron scripts.
+      Evidence: native Avalonia projects are under `apps/native-avalonia/`; no existing `dist:desktop:*` behavior was changed to package Avalonia output.
 
 ## Out Of Scope
 

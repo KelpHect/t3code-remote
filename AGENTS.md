@@ -5,7 +5,7 @@
 - Default to changing repository code directly when asked to implement; do not stop at proposals unless the user explicitly asks for planning or investigation only.
 - Preserve the hard product boundary for native work: implement only in `apps/native-avalonia/` and synchronized docs. Do not change existing backend, web, desktop, or shared package code to support native/mobile.
 - Native mobile must work against an unmodified original T3 backend. Implement all protocol parsing, compatibility, mapping, retry, persistence, bundled app-owned helper services, and UI work in the native app instead of requiring a T3 fork or changes to existing backend/web/desktop/shared code.
-- Do not implement or plan `/api/native/descriptor`, `/native/ws`, new T3 backend RPC behavior, server-side git progress streams, server-side mobile affordances, package contract changes, or web/desktop changes for native support.
+- Do not implement or plan `/api/native/descriptor`, `/native/ws`, new RPC behavior, server-side git progress streams, server-side mobile affordances, package contract changes, or web/desktop changes in the existing T3 codebase for native support.
 - Bundled app-owned compatibility runtimes are allowed when they live under `apps/native-avalonia/`, ship with our app, require no separate user installation, and only communicate with the original T3 backend through behavior already available to the existing desktop/web app.
 - If existing backend behavior is awkward, mirror the desktop client's behavior from the native app or an app-owned compatibility runtime and isolate the awkwardness behind native interfaces.
 
@@ -114,7 +114,7 @@
 
 ## Blockers
 
-- Stop before changing existing backend/web/desktop/shared package code for native support. The current product direction forbids that path.
+- Stop before changing existing backend/web/desktop/shared package code for native support. The current product direction forbids changing existing T3 code for native support.
 - Stop and report a concrete blocker only after exhausting native-app options, including a bundled compatibility runtime. Do not convert the blocker into changes to existing T3 code.
 - Stop and ask before storing production tokens outside a platform secure store.
 - Stop and ask before exposing T3 over a public network, adding unauthenticated endpoints, or weakening pairing/session revocation.

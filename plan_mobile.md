@@ -17,7 +17,7 @@ Current implementation lives in `apps/native-avalonia/` and uses Avalonia 12 / .
 - `T3Code.Native.App` implements an Avalonia MVVM pairing/chat-shell scaffold.
 - `T3Code.Native.Tests` covers protocol encode/decode, reconnect replay, cancellation replay behavior, and sequence ordering.
 - The existing backend exposes `/api/auth/bootstrap/bearer` and `/api/auth/ws-token`.
-- Product decision: the mobile app must work with the original unmodified T3 backend. All native support work happens in the native app. The implementation targets behavior already available from the existing backend and must not require `/api/native/descriptor`, `/native/ws`, existing backend changes, shared package changes, or a T3 fork. The app may include a bundled app-owned compatibility runtime or local helper service if that is needed for flawless support.
+- Product decision: the mobile app must work with the original unmodified T3 backend. All native support work happens in the native app. The implementation targets behavior already available from the existing backend and must not require `/api/native/descriptor`, `/native/ws`, existing backend changes, shared package changes, or a T3 fork in the existing T3 codebase. The app may include a bundled app-owned compatibility runtime or local helper service if that is needed for flawless support.
 
 ## Local Android Setup Findings
 
@@ -162,9 +162,9 @@ Existing endpoints used by the native app:
 
 Current product rule:
 
-- Do not require backend changes for native support.
+- Do not require existing T3 backend changes for native support.
 - Do not require users to install a fork of T3.
-- Do not modify existing backend, web, desktop, or shared package code for native support.
+- Do not modify existing T3 backend, web, desktop, or shared package code for native support.
 - Do not require a separately installed adapter, plugin, or custom backend outside our app.
 - Implement all extra compatibility and processing work under `apps/native-avalonia/`.
 - Allow a bundled app-owned compatibility runtime or local helper service if direct native `/ws` consumption is not enough.
@@ -217,7 +217,7 @@ Implementation consequence:
 - Add a bundled app-owned compatibility runtime if direct transport becomes too brittle or cannot cover desktop parity cleanly.
 - Add fixture-based tests so original-backend protocol drift is caught quickly.
 - Keep compatibility code contained and keep UI/domain code independent of private wire details.
-- Do not change existing backend, web, desktop, or shared package code for native support.
+- Do not change existing T3 backend, web, desktop, or shared package code for native support.
 
 ## Native App Shape
 
