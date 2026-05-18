@@ -33,7 +33,7 @@ docs.
       `IonApp`, `IonRouterOutlet`, `IonPage`, `IonHeader`, `IonContent`, and
       `IonFooter` as the top-level page structure; no desktop-width tab bar or
       button grid is visible on phone viewports.
-- [ ] Build the main chat screen with Ionic primitives first.
+- [x] Build the main chat screen with Ionic primitives first.
       Acceptance: chat uses `IonHeader`/`IonToolbar` for title, project/model
       affordances, and menu access; `IonContent` for a scrollable message list;
       `IonFooter` for a fixed composer; `IonTextarea`, `IonButton`, and
