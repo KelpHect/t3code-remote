@@ -153,6 +153,18 @@ Switch to Flutter if Avalonia cannot pass the Android decision gate quickly:
 
 Backend compatibility work stays reusable if the client library boundary remains clean: app/UI state should consume app-owned DTOs, while the existing `/ws` wire format and any app-owned helper runtime stay isolated behind native compatibility interfaces.
 
+## iOS Deferral Gate
+
+iOS stays deferred until Android proves the architecture on an emulator or physical device. The Android pass/fail gate is:
+
+- discover and pair with an unmodified existing T3 backend;
+- keep `/ws` shell and thread subscriptions stable during normal chat use;
+- recover after emulator sleep, app background/foreground, and VPN/network interruption;
+- render a long chat, diff, git progress stream, and terminal scrollback without layout or memory issues;
+- pass the full validation set listed below after the Android runtime test.
+
+Starting iOS work requires a macOS host with Xcode, .NET 10 iOS workload support, a valid Apple developer team/signing identity, an app id/bundle id decision, a provisioning profile, and either a physical iOS device or Simulator validation path. Linux-only `dotnet build` checks are not accepted as iOS proof.
+
 ## Backend Contract
 
 Do not connect the phone directly to Codex app-server. T3's server must remain the broker for provider sessions, files, git, terminals, approvals, and orchestration state.
@@ -363,9 +375,7 @@ Native client tests:
 
 ## Open Risks
 
-- The current native app can pair but cannot stream orchestration until the existing `/ws` compatibility transport is implemented.
+- Android runtime proof still needs repeated real-use testing for VPN drop/rejoin, app backgrounding, long chats, and terminal/git output volume.
 - Original backend wire-format changes can break native compatibility; fixture replay tests and a narrow compatibility layer are required.
 - Avalonia mobile support is improving but less proven than Flutter for mobile polish.
-- Pairing against a real local backend from the emulator is still pending.
 - iOS cannot be validated from this Linux environment without a macOS/Xcode/signing path.
-- Cleartext HTTP is acceptable only for paired private-network use and must not become a broad insecure browser.

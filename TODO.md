@@ -128,8 +128,8 @@ Purpose: make Android and later iOS safe and shippable. Risk: medium, with secur
 ### iOS
 
 - [x] Add local-network/ATS plist entries for the iOS scaffold. Evidence: `Info.plist` contains `NSAllowsLocalNetworking` and local network usage text.
-- [ ] Defer iOS build until Android proves the architecture.
-      Acceptance: `plan_mobile.md` names the macOS/Xcode/signing prerequisites and the Android pass/fail gate before iOS work starts.
+- [x] Defer iOS build until Android proves the architecture.
+      Evidence: `plan_mobile.md` now has an iOS deferral gate that requires Android discovery/pairing, stable `/ws` subscriptions, reconnect after sleep/background/VPN interruption, long chat/diff/git/terminal rendering, and the full validation set before iOS work starts. It also names the macOS, Xcode, .NET iOS workload, Apple signing identity, app id/bundle id, provisioning profile, and device/simulator prerequisites.
 
 ## P5 - Native Validation Baseline
 
