@@ -49,7 +49,8 @@ Purpose: unblock real chat/project/git/terminal behavior against an unmodified o
 
 - [x] Choose the production-compatible backend path.
       Evidence: `plan_mobile.md` documents that the active path is compatibility with the original backend from our app, with no T3 fork, existing backend endpoint, or shared package change required. Bundled app-owned compatibility runtimes are allowed.
-- [ ] Capture current backend `/ws` handshake and RPC frames as compatibility fixtures.
+- [x] Capture current backend `/ws` handshake and RPC frames as compatibility fixtures.
+      Evidence: `apps/native-avalonia/T3Code.Native.Tests/Fixtures/ExistingWs/effect-rpc-json-v1.json` records redacted Effect RPC JSON frames for auth bootstrap, ws-token issue, `/ws` connection, request/response calls, subscription chunks, ack, interrupt/cancel, and error exits. Coverage includes shell subscription, thread subscription, dispatch command, turn/full-thread diffs, filesystem browse, source-control lookup/clone, VCS refresh, git action error, and terminal event/open/close frames. `jq empty` validates the fixture JSON.
       Acceptance: fixture files contain redacted request/response/subscription/cancel/error examples for shell subscription, thread subscription, dispatch command, diffs, git, filesystem, and terminal calls; fixtures contain no pairing tokens, bearer tokens, ws tokens, local secrets, or private paths beyond synthetic test paths.
 - [ ] Implement an isolated existing-`/ws` compatibility transport in `T3Code.Native.Client`.
       Acceptance: native code can connect to an unmodified backend `/ws` using `/api/auth/ws-token`, perform request/response calls, start subscriptions, receive events, cancel streams, and surface protocol errors through app-owned interfaces; no UI/view model references the private wire format directly.

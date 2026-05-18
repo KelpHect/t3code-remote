@@ -91,6 +91,7 @@
 ## Tests And Fixtures
 
 - Existing `/ws` compatibility tests must cover auth, request/response, subscriptions, cancellation, reconnect, malformed messages, expired `wsToken`, duplicate command retry, and drift fixtures captured from the current backend.
+- Current redacted `/ws` drift fixtures live in `apps/native-avalonia/T3Code.Native.Tests/Fixtures/ExistingWs/`; keep them token-free and path-redacted.
 - Native client tests must cover JSON encode/decode, reconnect replay, command outbox behavior, stream cancellation, protocol errors, and sequence ordering.
 - Do not collapse production compatibility matrix tests into broad smoke tests when individual failure paths are useful.
 - When test failures depend on localized git stderr, verify with C locale before changing product code.

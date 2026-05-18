@@ -227,6 +227,11 @@ Implementation consequence:
 - Keep compatibility code contained and keep UI/domain code independent of private wire details.
 - Do not change existing T3 backend, web, desktop, or shared package code for native support.
 
+Captured current-wire fixtures live under
+`apps/native-avalonia/T3Code.Native.Tests/Fixtures/ExistingWs/`. They document
+the active Effect RPC JSON frame names: `Request`, `Exit`, `Chunk`, `Ack`, and
+`Interrupt`.
+
 ## Native App Shape
 
 Current projects:
