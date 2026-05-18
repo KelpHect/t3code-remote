@@ -80,23 +80,23 @@ docs.
       Evidence: `apps/mobile/package.json`, `index.html`, `src/`,
       `vite.config.ts`, `tsconfig.json`, `ionic.config.json`, and starter
       `Tab1Page`/`Tab2Page`/`Tab3Page` views exist.
-- [ ] Normalize the scaffold for this monorepo.
+- [x] Normalize the scaffold for this monorepo.
       Acceptance: package name is project-scoped, starter description is
-      replaced, generated `node_modules` is removed from the worktree, and
+      replaced, generated `node_modules` remains ignored/untracked, and
       scripts include `dev`, `build`, `preview`, `lint`, `typecheck`, `test`,
       `test:e2e`, and `cap:sync:android`.
-- [ ] Fix the scaffold lint baseline.
+- [x] Fix the scaffold lint baseline.
       Evidence: `bun --cwd apps/mobile lint` currently fails because ESLint
       cannot resolve `@typescript-eslint/eslint-plugin`.
       Acceptance: required ESLint dependencies/config are present and
       `bun --cwd apps/mobile lint` passes without new warnings in mobile files.
-- [ ] Fix the scaffold unit-test baseline.
+- [x] Fix the scaffold unit-test baseline.
       Evidence: `bun --cwd apps/mobile test:unit --run` currently fails in
       `tests/unit/example.spec.ts` while importing the starter `Tab1Page.vue`.
       Acceptance: the mobile test command is `bun --cwd apps/mobile test`, uses
       the app's Vitest config, and passes against the current starter or
       replacement shell.
-- [ ] Fix the scaffold build baseline.
+- [x] Fix the scaffold build baseline.
       Evidence: `bun --cwd apps/mobile build` currently passes `vue-tsc` but
       Vite build fails because the starter legacy plugin emits unsupported
       `output.format: system`.
