@@ -118,8 +118,8 @@ Purpose: make Android and later iOS safe and shippable. Risk: medium, with secur
 ### Android
 
 - [x] Allow cleartext for the Android spike. Evidence: Android manifest has `android:usesCleartextTraffic="true"` and internet permission.
-- [ ] Restrict cleartext behavior to paired private hosts before production release.
-      Acceptance: arbitrary cleartext hosts are blocked or warned, paired hosts are explicit, and the UI shows VPN/private-network framing.
+- [x] Restrict cleartext behavior to paired private hosts before production release.
+      Evidence: `NativeEndpointSecurity` allows HTTPS plus explicit loopback, emulator, LAN, link-local, CGNAT, and IPv6 local/private hosts while blocking public cleartext URLs before pairing token exchange; `MainViewModel` applies the check before auth bootstrap and keeps the VPN/private-network framing in status text. `NativeEndpointSecurityTests` covers allowed private hosts, blocked public hosts, and unsupported schemes.
 - [ ] Replace placeholder Android icon/signing/versioning before release.
       Evidence: package id is now `codes.t3.nativeapp` and activity label is `T3 Code`, but release signing, production icon, and versioning policy still need a release pass.
       Acceptance: app id, display name, icon, version name/code, signing inputs, and artifact naming are production-shaped.

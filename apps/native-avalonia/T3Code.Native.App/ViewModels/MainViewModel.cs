@@ -12,6 +12,7 @@ using T3Code.Native.Client.Commands;
 using T3Code.Native.Client.Config;
 using T3Code.Native.Client.Diff;
 using T3Code.Native.Client.Git;
+using T3Code.Native.Client.Security;
 using T3Code.Native.Client.Terminal;
 using T3Code.Native.Client.Discovery;
 using T3Code.Native.Client.Shell;
@@ -214,6 +215,13 @@ public partial class MainViewModel : ViewModelBase
         if (!Uri.TryCreate(BaseUrl.Trim(), UriKind.Absolute, out var baseUri))
         {
             Status = "Enter a valid backend URL.";
+            return;
+        }
+
+        var endpointDecision = NativeEndpointSecurity.Evaluate(baseUri);
+        if (!endpointDecision.IsAllowed)
+        {
+            Status = endpointDecision.Message;
             return;
         }
 
