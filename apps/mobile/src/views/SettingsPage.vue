@@ -181,7 +181,7 @@ import {
   warningOutline,
 } from "ionicons/icons";
 
-import { bootstrapBearerSession } from "@/client/auth";
+import { bootstrapBearerSession, issueWebSocketToken } from "@/client/auth";
 import { useConnectionState } from "@/client/connectionState";
 
 const {
@@ -193,6 +193,7 @@ const {
   selectedBackend,
   setBearerSession,
   setManualUrl,
+  setWebSocketToken,
   statusDetail,
   statusText,
 } = useConnectionState();
@@ -233,12 +234,18 @@ const pairBackend = async () => {
       backendUrl,
       pairingInput: pairingInput.value,
     });
+    const webSocketToken = await issueWebSocketToken({
+      backendUrl,
+      sessionToken: session.sessionToken,
+    });
     setBearerSession(session);
+    setWebSocketToken(webSocketToken);
     pairingInput.value = "";
     pairingState.value = "paired";
-    pairingMessage.value = "Bearer session is active for this mobile client.";
+    pairingMessage.value = "Bearer session and WebSocket token are ready.";
   } catch (error) {
     setBearerSession(null);
+    setWebSocketToken(null);
     pairingState.value = "failed";
     pairingMessage.value = error instanceof Error ? error.message : "Pairing failed.";
   }

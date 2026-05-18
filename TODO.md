@@ -171,7 +171,11 @@ endpoints or change existing auth behavior.
       Acceptance: request accepts pairing token or URL, extracts token from URL
       fragments, decodes the existing `sessionToken` response field, and never
       logs credentials.
-- [ ] Implement short-lived ws-token issue through `POST /api/auth/ws-token`.
+- [x] Implement short-lived ws-token issue through `POST /api/auth/ws-token`.
+      Evidence: `apps/mobile/src/client/auth.ts` requests `/api/auth/ws-token`
+      with `Authorization: Bearer <sessionToken>`, decodes the existing `token`
+      response field, rejects malformed responses, and the settings pairing
+      flow surfaces auth denial while clearing in-memory auth state.
       Acceptance: request sends bearer authorization, decodes the existing
       `token` response field, and surfaces auth denial clearly.
 - [ ] Store bearer tokens behind a mobile secure-storage adapter.

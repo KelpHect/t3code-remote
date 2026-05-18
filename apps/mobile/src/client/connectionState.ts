@@ -1,6 +1,6 @@
 import { computed, ref } from "vue";
 
-import { BearerSession } from "./auth";
+import { BearerSession, WebSocketToken } from "./auth";
 import {
   BackendCandidate,
   generateBackendCandidates,
@@ -15,6 +15,7 @@ const candidates = ref<readonly BackendCandidate[]>([]);
 const probeResults = ref<readonly SessionProbeResult[]>([]);
 const selectedBackend = ref<SessionProbeResult | null>(null);
 const bearerSession = ref<BearerSession | null>(null);
+const webSocketToken = ref<WebSocketToken | null>(null);
 const discoveryState = ref<DiscoveryState>("idle");
 const lastScanStartedAt = ref<number | null>(null);
 const lastScanFinishedAt = ref<number | null>(null);
@@ -31,6 +32,7 @@ const lastError = computed(() => {
   return firstFailure?.message ?? "No scan has run yet.";
 });
 const statusText = computed(() => {
+  if (webSocketToken.value) return "Ready";
   if (bearerSession.value) return "Paired";
   if (selectedBackend.value) {
     if (discoveryState.value === "scanning") return "Checking live";
@@ -41,6 +43,9 @@ const statusText = computed(() => {
   return "Not connected";
 });
 const statusDetail = computed(() => {
+  if (bearerSession.value && webSocketToken.value && selectedBackend.value) {
+    return `Realtime token ready for ${selectedBackend.value.candidate.url}`;
+  }
   if (bearerSession.value && selectedBackend.value) {
     return `Paired with ${selectedBackend.value.candidate.url}`;
   }
@@ -145,6 +150,11 @@ function setManualUrl(value: string) {
 
 function setBearerSession(session: BearerSession | null) {
   bearerSession.value = session;
+  if (!session) webSocketToken.value = null;
+}
+
+function setWebSocketToken(token: WebSocketToken | null) {
+  webSocketToken.value = token;
 }
 
 export function useConnectionState() {
@@ -162,10 +172,12 @@ export function useConnectionState() {
     selectedBackend,
     setBearerSession,
     setManualUrl,
+    setWebSocketToken,
     startDiscoveryLoop,
     statusDetail,
     statusText,
     stopDiscoveryLoop,
     validBackends,
+    webSocketToken,
   };
 }
