@@ -25,7 +25,7 @@ public sealed record DiscoveredT3Backend(
     string Source,
     string Label,
     bool Authenticated,
-    string? AuthMode
+    string? AuthPolicy
 );
 
 public interface IT3BackendCandidateProvider
@@ -124,7 +124,7 @@ public sealed class T3BackendDiscoveryClient(
                 candidate.Source,
                 $"{candidate.BaseUri.Authority} ({candidate.Source})",
                 session.Authenticated,
-                session.Auth.Mode
+                session.Auth.Policy
             );
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -245,4 +245,4 @@ public sealed record T3AuthSessionProbe(
     T3AuthDescriptorProbe? Auth
 );
 
-public sealed record T3AuthDescriptorProbe(string Mode);
+public sealed record T3AuthDescriptorProbe(string Policy);

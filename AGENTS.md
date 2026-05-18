@@ -111,6 +111,7 @@
 - `platforms/android-36/android.jar` exists, and plain `dotnet build apps/native-avalonia/T3Code.Native.App.Android/T3Code.Native.App.Android.csproj` passes after sourcing zsh/bash rc files.
 - Android debug APKs must embed assemblies for plain `adb install`; otherwise Mono aborts on launch with a fast-deployment `No assemblies found` error.
 - The native spike can pair using existing backend auth; full functionality depends on implementing the original backend `/ws` compatibility layer in the app, not on server changes.
+- Existing auth response field names are `sessionToken` from `/api/auth/bootstrap/bearer` and `token` from `/api/auth/ws-token`; do not invent `bearerToken` or `wsToken` native DTO fields for those HTTP responses.
 
 ## Blockers
 

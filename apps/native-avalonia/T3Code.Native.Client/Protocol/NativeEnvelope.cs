@@ -72,10 +72,10 @@ public sealed record AuthBearerBootstrapResult(
     string Role,
     string SessionMethod,
     string ExpiresAt,
-    string BearerToken
+    string SessionToken
 );
 
-public sealed record AuthWebSocketTokenResult(string WsToken, string ExpiresAt);
+public sealed record AuthWebSocketTokenResult(string Token, string ExpiresAt);
 
 public static class NativeEnvelopeJson
 {

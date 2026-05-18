@@ -38,7 +38,7 @@ Installed locally:
 
 Missing or not configured:
 
-- Pairing against a real desktop backend is not validated yet.
+- Pairing against a real desktop backend is validated through the existing auth endpoints: a one-time pairing token from `t3 auth pairing create` was exchanged with the running desktop backend, then used to issue a ws token.
 - Native network discovery for reachable T3 backends is implemented through `GET /api/auth/session` probes; manual URL entry remains available.
 - Non-interactive shells that do not source zsh/bash rc files may still see stale Android/Java paths; source the rc file before build checks.
 
@@ -162,6 +162,11 @@ Existing endpoints used by the native app:
 - `POST /api/auth/bootstrap/bearer`
 - `POST /api/auth/ws-token`
 - `GET /ws` with the issued `wsToken`, using the current backend WebSocket/RPC format
+
+Response fields to preserve in native DTOs:
+
+- `/api/auth/bootstrap/bearer` returns `sessionToken`.
+- `/api/auth/ws-token` returns `token`.
 
 Current product rule:
 

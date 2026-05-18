@@ -151,11 +151,11 @@ public partial class MainViewModel : ViewModelBase
             Status = "Pairing...";
             var credential = ExtractPairingCredential(PairingToken);
             var auth = await _authClient.ExchangePairingTokenAsync(baseUri, credential);
-            await _secretStore.SaveBearerTokenAsync(baseUri, auth.BearerToken);
-            var wsToken = await _authClient.IssueWebSocketTokenAsync(baseUri, auth.BearerToken);
+            await _secretStore.SaveBearerTokenAsync(baseUri, auth.SessionToken);
+            var wsToken = await _authClient.IssueWebSocketTokenAsync(baseUri, auth.SessionToken);
             IsPaired = true;
             ServerName = baseUri.Authority;
-            Protocol = NativeAuthClient.BuildExistingWebSocketUri(baseUri, wsToken.WsToken).ToString();
+            Protocol = NativeAuthClient.BuildExistingWebSocketUri(baseUri, wsToken.Token).ToString();
             Status = baseUri.Scheme == Uri.UriSchemeHttp
                 ? "Paired over cleartext HTTP. Use only through VPN/private LAN."
                 : "Paired.";

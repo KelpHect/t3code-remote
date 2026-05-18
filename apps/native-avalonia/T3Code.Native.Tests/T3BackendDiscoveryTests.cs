@@ -17,7 +17,7 @@ public sealed class T3BackendDiscoveryTests
                     return new HttpResponseMessage(HttpStatusCode.OK)
                     {
                         Content = new StringContent(
-                            """{"authenticated":false,"auth":{"mode":"required"}}"""
+                            """{"authenticated":false,"auth":{"policy":"remote-reachable"}}"""
                         ),
                     };
                 }
@@ -40,7 +40,7 @@ public sealed class T3BackendDiscoveryTests
         Assert.Equal("http://192.168.1.42:3773", backend.BaseUri.GetLeftPart(UriPartial.Authority));
         Assert.Equal("private-subnet", backend.Source);
         Assert.False(backend.Authenticated);
-        Assert.Equal("required", backend.AuthMode);
+        Assert.Equal("remote-reachable", backend.AuthPolicy);
     }
 
     [Fact]

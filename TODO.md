@@ -37,9 +37,9 @@ Purpose: make the Avalonia Android spike buildable and runnable on an emulator w
       Evidence: `dotnet clean ...Android.csproj` followed by an Android build passed with explicit SDK/JDK properties; after shell rc refresh, plain `dotnet build apps/native-avalonia/T3Code.Native.App.Android/T3Code.Native.App.Android.csproj` also passes from both zsh and bash.
 - [x] Discover existing T3 backends on the reachable private network instead of relying on a hardcoded URL.
       Evidence: `T3BackendDiscoveryClient` probes `GET /api/auth/session` on loopback, Android emulator host, interface, gateway, and private subnet candidates; `MainView` exposes a scan action and discovered backend picker while retaining manual URL entry. `T3BackendDiscoveryTests` covers discovery and `/ws` URI generation.
-- [ ] Pair with the existing desktop backend using only existing auth endpoints.
-      Evidence: native client implements `/api/auth/bootstrap/bearer` and `/api/auth/ws-token`; existing T3 code changes are not part of the plan.
-      Acceptance: emulator or phone selects a discovered or manually entered VPN/LAN backend, exchanges a pairing token, receives a bearer token and ws token, and shows the paired state using only native app code.
+- [x] Pair with the existing desktop backend using only existing auth endpoints.
+      Evidence: native client implements `/api/auth/bootstrap/bearer` and `/api/auth/ws-token` using the existing backend's `sessionToken` and `token` response fields; `NativeAuthClientTests` covers request bodies, bearer authorization, and response decoding. Live validation created a one-time pairing credential through existing `t3 auth pairing create`, exchanged it with the currently running desktop backend at `http://127.0.0.1:3773`, and issued a short-lived ws token without printing secrets. Existing T3 code changes are not part of the plan.
+      Acceptance: a discovered or manually entered VPN/LAN backend can exchange a pairing token, receive a bearer session token and ws token, and show the paired state using only native app code.
 
 ## P1 - Existing Backend WebSocket Compatibility
 
