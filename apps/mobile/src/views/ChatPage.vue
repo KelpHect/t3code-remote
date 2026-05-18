@@ -3,9 +3,9 @@
     <ion-header class="chat-header">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-button aria-label="Open navigation">
+          <ion-menu-button aria-label="Open navigation">
             <ion-icon slot="icon-only" :icon="menuOutline" />
-          </ion-button>
+          </ion-menu-button>
         </ion-buttons>
         <ion-title>
           <span class="chat-title">Mobile UI rebuild</span>
@@ -84,6 +84,7 @@ import {
   IonFooter,
   IonHeader,
   IonIcon,
+  IonMenuButton,
   IonPage,
   IonTextarea,
   IonTitle,

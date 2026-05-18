@@ -39,7 +39,7 @@ docs.
       `IonFooter` for a fixed composer; `IonTextarea`, `IonButton`, and
       `IonIcon` for input/send/stop actions; the composer stays reachable above
       the Android navigation bar and keyboard.
-- [ ] Build the navigation drawer with `IonMenu`.
+- [x] Build the navigation drawer with `IonMenu`.
       Acceptance: the drawer contains search, new chat, project groups, recent
       threads, settings, and connection status using `IonSearchbar`, `IonList`,
       `IonItem`, `IonLabel`, `IonBadge`, and `IonIcon`; it feels like ChatGPT
