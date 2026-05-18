@@ -41,7 +41,7 @@ Present:
 - `src/App.vue`
 - `src/main.ts`
 - `src/router/index.ts`
-- starter tab views under `src/views/`
+- chat-first shell under `src/views/ChatPage.vue`
 - `src/theme/variables.css`
 - `vite.config.ts`
 - `tsconfig.json`
@@ -54,7 +54,6 @@ Present:
 
 Still to replace:
 
-- Generated tabs UI
 - T3 Code chat/history/projects/settings/tools screens
 - Backend discovery, pairing, or `/ws` compatibility code
 

@@ -26,9 +26,9 @@ docs.
 
 ### UI Direction And Ionic Component Contract
 
-- [ ] Replace the generated tabs starter with a chat-first Ionic shell.
-      Evidence: the scaffold currently uses starter `Tab1Page`/`Tab2Page`/
-      `Tab3Page` views.
+- [x] Replace the generated tabs starter with a chat-first Ionic shell.
+      Evidence: the scaffold no longer routes through starter `Tab1Page`/
+      `Tab2Page`/`Tab3Page` views.
       Acceptance: the default route opens a chat screen, not tabs; the app uses
       `IonApp`, `IonRouterOutlet`, `IonPage`, `IonHeader`, `IonContent`, and
       `IonFooter` as the top-level page structure; no desktop-width tab bar or
