@@ -61,7 +61,8 @@ Purpose: unblock real chat/project/git/terminal behavior against an unmodified o
 - [x] Replace placeholder shell data with existing-backend `orchestration.subscribeShell`.
       Evidence: `NativeShellClient` maps shell stream items into app-owned project/thread DTOs, and `MainViewModel` starts an `ExistingWsRpcSession` after pairing, subscribes to `orchestration.subscribeShell`, and replaces placeholder project/thread lists from snapshots and incremental events. `NativeShellClientTests` covers snapshot/removal mapping. A live C# validation against the running desktop backend received a real shell snapshot through the native transport (`projects=6`, `threads=5`) without backend changes.
       Acceptance: Android emulator or phone pairs to a discovered or manually entered local desktop backend, subscribes to shell state over `/ws`, and renders real projects/threads using only native app code.
-- [ ] Add drift tests for the compatibility transport.
+- [x] Add drift tests for the compatibility transport.
+      Evidence: `ExistingWsFixtureDriftTests` copies the redacted `/ws` fixtures into test output, checks required method coverage and secret redaction, replays unary success frames through `ExistingWsRpcSession`, replays shell subscription chunks through `NativeShellClient`, and replays failure exits through `ExistingWsRpcException`. Failures name the impacted fixture frame.
       Acceptance: tests replay captured fixtures and fail narrowly when original-backend wire shapes change; failures identify the impacted method or envelope.
 - [ ] Map existing backend data into app-owned native DTOs.
       Acceptance: UI/view models consume app-owned DTOs only; no view model, persistence type, or screen references the existing backend wire format or helper-runtime protocol directly.

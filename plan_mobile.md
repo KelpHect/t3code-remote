@@ -247,6 +247,10 @@ existing `/ws` session and subscribes to `orchestration.subscribeShell` through
 `NativeShellClient`. A live desktop-backend check received a real shell snapshot
 through the C# transport.
 
+Fixture drift tests now replay the captured `/ws` frames through the native
+transport and shell mapper so changes to Effect RPC envelope shape fail in the
+native test suite before they reach UI code.
+
 ## Native App Shape
 
 Current projects:
