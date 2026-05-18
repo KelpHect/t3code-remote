@@ -14,7 +14,7 @@
             <ion-icon slot="start" :icon="addOutline" />
             <ion-label>New chat</ion-label>
           </ion-item>
-          <ion-item button :detail="false">
+          <ion-item button :detail="false" router-link="/settings" router-direction="forward">
             <ion-icon slot="start" :icon="settingsOutline" />
             <ion-label>Settings</ion-label>
           </ion-item>

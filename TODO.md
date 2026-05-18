@@ -49,7 +49,7 @@ docs.
       approvals, and connection diagnostics open through `IonModal`,
       `IonActionSheet`, focused pages, or bottom-sheet style overlays; they do
       not appear as permanent dense tool panes on the default chat screen.
-- [ ] Build settings/connection as a clean Ionic list screen.
+- [x] Build settings/connection as a clean Ionic list screen.
       Acceptance: backend discovery, manual URL, pairing token, private-network
       warning, diagnostics, theme, and app info use `IonList`, `IonItem`,
       `IonInput`, `IonTextarea`, `IonToggle`, `IonNote`, and `IonButton` with
