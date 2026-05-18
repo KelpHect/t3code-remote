@@ -232,6 +232,10 @@ Captured current-wire fixtures live under
 the active Effect RPC JSON frame names: `Request`, `Exit`, `Chunk`, `Ack`, and
 `Interrupt`.
 
+The native compatibility implementation starts in
+`T3Code.Native.Client/Transport/ExistingWsRpcSession.cs`. This is the only layer
+that should know the current Effect RPC frame names.
+
 ## Native App Shape
 
 Current projects:
