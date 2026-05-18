@@ -17,13 +17,59 @@ legacy plugin emits unsupported `output.format: system` under this repo's
 Vite/Rolldown stack. Existing backend, web, desktop, and shared package code
 remain out of scope for mobile support.
 
-## P0 - Ionic Vue App Bring-Up
+## P0 - Ionic Vue UI Bring-Up
 
-Purpose: normalize the new Ionic Vue scaffold and make it runnable on Android
-emulator with a clean chat-first shell. Risk: high because no mobile work is
-valid until the app has the right scripts, Capacitor target, and mobile UX
-baseline. Scope guardrail: only `apps/mobile/`, root workspace wiring needed for
-that app, and synchronized docs.
+Purpose: make the Ionic Vue app start with the desired mobile experience: clean,
+chat-first, ChatGPT-like, and built from Ionic components before backend
+protocol work. Risk: high because the failed native spike showed that a dense
+desktop control panel is not acceptable on mobile. Scope guardrail: only
+`apps/mobile/`, root workspace wiring needed for that app, and synchronized
+docs.
+
+### UI Direction And Ionic Component Contract
+
+- [ ] Replace the generated tabs starter with a chat-first Ionic shell.
+      Evidence: the scaffold currently uses starter `Tab1Page`/`Tab2Page`/
+      `Tab3Page` views.
+      Acceptance: the default route opens a chat screen, not tabs; the app uses
+      `IonApp`, `IonRouterOutlet`, `IonPage`, `IonHeader`, `IonContent`, and
+      `IonFooter` as the top-level page structure; no desktop-width tab bar or
+      button grid is visible on phone viewports.
+- [ ] Build the main chat screen with Ionic primitives first.
+      Acceptance: chat uses `IonHeader`/`IonToolbar` for title, project/model
+      affordances, and menu access; `IonContent` for a scrollable message list;
+      `IonFooter` for a fixed composer; `IonTextarea`, `IonButton`, and
+      `IonIcon` for input/send/stop actions; the composer stays reachable above
+      the Android navigation bar and keyboard.
+- [ ] Build the navigation drawer with `IonMenu`.
+      Acceptance: the drawer contains search, new chat, project groups, recent
+      threads, settings, and connection status using `IonSearchbar`, `IonList`,
+      `IonItem`, `IonLabel`, `IonBadge`, and `IonIcon`; it feels like ChatGPT
+      history navigation while preserving T3 Code's project/thread grouping.
+- [ ] Build contextual tools as mobile sheets, modals, or action menus.
+      Acceptance: model/mode picker, diff, git actions, files, terminal,
+      approvals, and connection diagnostics open through `IonModal`,
+      `IonActionSheet`, focused pages, or bottom-sheet style overlays; they do
+      not appear as permanent dense tool panes on the default chat screen.
+- [ ] Build settings/connection as a clean Ionic list screen.
+      Acceptance: backend discovery, manual URL, pairing token, private-network
+      warning, diagnostics, theme, and app info use `IonList`, `IonItem`,
+      `IonInput`, `IonTextarea`, `IonToggle`, `IonNote`, and `IonButton` with
+      readable spacing and no clipped controls.
+- [ ] Theme through Ionic CSS variables and component parts.
+      Acceptance: `src/theme/variables.css` defines light and dark palettes,
+      safe-area-aware spacing, font, toolbar, content, item, modal, and composer
+      variables; component overrides use Ionic CSS variables/shadow parts where
+      possible instead of brittle DOM selectors.
+- [ ] Capture UI reference acceptance screenshots before backend work.
+      Acceptance: emulator screenshots for empty chat, populated chat, drawer
+      history, settings/connection, model/mode sheet, and one tool sheet show no
+      clipped text, overlapped controls, wide tabs, setup-first empty state, or
+      desktop dashboard layout.
+- [ ] Keep an Ionic component reference note in `apps/mobile/README.md`.
+      Acceptance: README names the Ionic components used for page structure,
+      drawer, sheets/modals, lists, composer, and theming, with links to the
+      official Ionic Vue/navigation/components/theming docs.
 
 ### App Scaffold
 
@@ -68,27 +114,6 @@ that app, and synchronized docs.
 - [ ] Add `apps/mobile/README.md`.
       Acceptance: README documents setup, Android emulator run commands, backend
       boundary, private-network requirement, and validation commands.
-
-### First Mobile UI
-
-- [ ] Build a ChatGPT-like mobile shell with static fixture data before protocol
-      work.
-      Acceptance: default screen is a chat view with clean header, message list,
-      fixed bottom composer, model/mode affordance, and menu/history entry;
-      connection setup is not the primary empty screen.
-- [ ] Add history/search screen grouped by recency and project.
-      Acceptance: thread rows show title, project context, last activity text,
-      and group headers such as Today, Yesterday, Previous 7 days, and Previous
-      30 days.
-- [ ] Add projects screen matching T3 Code's desktop mental model.
-      Acceptance: projects are grouped with active/working state and thread
-      counts; selecting a project filters or opens its thread history.
-- [ ] Add settings/connection screen.
-      Acceptance: screen contains backend discovery, manual URL entry, pairing
-      token/URL input, private-network warning, and discovery diagnostics.
-- [ ] Capture emulator screenshots for chat, history, projects, and connection.
-      Acceptance: screenshots show no clipped text, overlapping controls, wide
-      desktop tab bars, dense button grids, or setup-first UI.
 
 ## P1 - Backend Discovery And Pairing
 
