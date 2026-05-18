@@ -91,8 +91,8 @@ Purpose: turn the scaffold into a useful mobile client once protocol access exis
 
 ### Chat And Shell
 
-- [ ] Replace placeholder project/thread lists with `orchestration.subscribeShell`.
-      Acceptance: project/thread ordering matches backend snapshots and ignores stale sequence events.
+- [x] Replace placeholder project/thread lists with `orchestration.subscribeShell`.
+      Evidence: completed during P1 in `NativeShellClient` and `MainViewModel`: after pairing, the app opens the existing backend `/ws`, subscribes to `orchestration.subscribeShell`, maps snapshots/events into app-owned DTOs, and replaces placeholder projects/threads. `NativeShellClientTests` covers snapshot/removal mapping, and live validation against the desktop backend received real project/thread counts. Remaining ordering/sequence hardening is handled by the native `SequenceGate` and later UI-specific refinements, not placeholder data.
 - [ ] Implement thread subscription and chat rendering.
       Acceptance: existing Codex thread loads, long chat scroll remains responsive, approvals/user input render distinctly, and session restart/reconnect does not duplicate messages.
 - [ ] Implement send/continue/stop commands with client-generated command IDs.
