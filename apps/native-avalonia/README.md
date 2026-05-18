@@ -46,4 +46,31 @@ Expected local state: `ANDROID_HOME=/home/kellhect/Android/Sdk`, Android SDK too
 
 The Android project embeds assemblies in the APK so the published debug APK can be installed with plain `adb install` without fast-deployment runtime state.
 
+## Android Release Shape
+
+Android package metadata is owned by `T3Code.Native.App.Android.csproj`:
+
+- App id: `codes.t3.nativeapp`
+- Display name: `T3 Code`
+- Version name/code: `0.1.0` / `100`
+- Icon: `T3Code.Native.App.Android/Icon.png`
+
+Debug APK path:
+
+```sh
+apps/native-avalonia/T3Code.Native.App.Android/bin/Debug/net10.0-android/publish/codes.t3.nativeapp-Signed.apk
+```
+
+Release signing is opt-in through environment variables so local debug builds do not need private keys:
+
+```sh
+export T3_ANDROID_KEYSTORE=/secure/path/t3-code-upload.keystore
+export T3_ANDROID_KEYSTORE_PASSWORD=...
+export T3_ANDROID_KEY_ALIAS=t3-code-upload
+export T3_ANDROID_KEY_PASSWORD=...
+dotnet publish apps/native-avalonia/T3Code.Native.App.Android/T3Code.Native.App.Android.csproj -c Release
+```
+
+Use `-p:AndroidPackageFormat=apk` for a sideloadable release APK or `-p:AndroidPackageFormat=aab` for store upload. Release artifacts stay under `apps/native-avalonia/T3Code.Native.App.Android/bin/Release/net10.0-android/publish/` until a separate native release pipeline is added.
+
 iOS is scaffolded but still requires a macOS/Xcode/signing validation path.

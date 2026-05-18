@@ -120,9 +120,8 @@ Purpose: make Android and later iOS safe and shippable. Risk: medium, with secur
 - [x] Allow cleartext for the Android spike. Evidence: Android manifest has `android:usesCleartextTraffic="true"` and internet permission.
 - [x] Restrict cleartext behavior to paired private hosts before production release.
       Evidence: `NativeEndpointSecurity` allows HTTPS plus explicit loopback, emulator, LAN, link-local, CGNAT, and IPv6 local/private hosts while blocking public cleartext URLs before pairing token exchange; `MainViewModel` applies the check before auth bootstrap and keeps the VPN/private-network framing in status text. `NativeEndpointSecurityTests` covers allowed private hosts, blocked public hosts, and unsupported schemes.
-- [ ] Replace placeholder Android icon/signing/versioning before release.
-      Evidence: package id is now `codes.t3.nativeapp` and activity label is `T3 Code`, but release signing, production icon, and versioning policy still need a release pass.
-      Acceptance: app id, display name, icon, version name/code, signing inputs, and artifact naming are production-shaped.
+- [x] Replace placeholder Android icon/signing/versioning before release.
+      Evidence: `T3Code.Native.App.Android.csproj` now declares app id `codes.t3.nativeapp`, display name `T3 Code`, version name/code `0.1.0`/`100`, release signing properties driven by `T3_ANDROID_KEYSTORE*` environment variables, and lowercase Android icon resource naming. `Icon.png` was replaced with a 512px T3 Code icon, and `apps/native-avalonia/README.md` documents debug/release artifact paths plus APK/AAB package format switches.
 - [x] Add Android emulator screenshot/build gate.
       Evidence: `apps/native-avalonia/README.md` documents publish/install/launch/screenshot commands, and `apps/native-avalonia/artifacts/android-emulator-pairing-screen.png` records the Android pairing shell.
 

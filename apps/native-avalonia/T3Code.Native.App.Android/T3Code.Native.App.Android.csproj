@@ -5,16 +5,26 @@
     <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ApplicationId>codes.t3.nativeapp</ApplicationId>
-    <ApplicationVersion>1</ApplicationVersion>
-    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationTitle>T3 Code</ApplicationTitle>
+    <ApplicationVersion>100</ApplicationVersion>
+    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <AndroidPackageFormat>aab</AndroidPackageFormat>
+    <AndroidKeyStore Condition="'$(T3_ANDROID_KEYSTORE)' != ''">true</AndroidKeyStore>
+    <AndroidSigningKeyStore Condition="'$(T3_ANDROID_KEYSTORE)' != ''">$(T3_ANDROID_KEYSTORE)</AndroidSigningKeyStore>
+    <AndroidSigningStorePass Condition="'$(T3_ANDROID_KEYSTORE_PASSWORD)' != ''">$(T3_ANDROID_KEYSTORE_PASSWORD)</AndroidSigningStorePass>
+    <AndroidSigningKeyAlias Condition="'$(T3_ANDROID_KEY_ALIAS)' != ''">$(T3_ANDROID_KEY_ALIAS)</AndroidSigningKeyAlias>
+    <AndroidSigningKeyPass Condition="'$(T3_ANDROID_KEY_PASSWORD)' != ''">$(T3_ANDROID_KEY_PASSWORD)</AndroidSigningKeyPass>
+  </PropertyGroup>
+
   <ItemGroup>
     <AndroidResource Include="Icon.png">
-      <Link>Resources\drawable\Icon.png</Link>
+      <Link>Resources\drawable\icon.png</Link>
     </AndroidResource>
   </ItemGroup>
 
