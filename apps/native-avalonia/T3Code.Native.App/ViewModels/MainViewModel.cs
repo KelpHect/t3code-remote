@@ -10,6 +10,7 @@ using T3Code.Native.Client.Auth;
 using T3Code.Native.Client.Commands;
 using T3Code.Native.Client.Config;
 using T3Code.Native.Client.Diff;
+using T3Code.Native.Client.Git;
 using T3Code.Native.Client.Discovery;
 using T3Code.Native.Client.Shell;
 using T3Code.Native.Client.Thread;
@@ -46,6 +47,9 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private ThreadShellItem? _selectedThread;
 
+    [ObservableProperty]
+    private ProjectShellItem? _selectedProject;
+
     public ObservableCollection<DiscoveredBackendItem> DiscoveredBackends { get; } = [];
 
     public ObservableCollection<ProjectShellItem> Projects { get; } =
@@ -61,6 +65,11 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<ChatLineItem> ChatLines { get; } =
     [
         new("system", "The desktop backend remains the source of truth for projects, threads, diffs, git, and terminals."),
+    ];
+
+    public ObservableCollection<string> GitLogLines { get; } =
+    [
+        "Select a project and refresh git status.",
     ];
 
     public ObservableCollection<ModelSelectionItem> Models { get; } =
@@ -104,6 +113,12 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _diffStatus = "Select a thread and load a diff.";
+
+    [ObservableProperty]
+    private string _gitStatusText = "Select a project and refresh git status.";
+
+    [ObservableProperty]
+    private string _gitCommitMessage = "";
 
     private readonly NativeAuthClient _authClient = new(new HttpClient());
     private readonly T3BackendDiscoveryClient _discoveryClient = new(new HttpClient());
@@ -247,6 +262,85 @@ public partial class MainViewModel : ViewModelBase
         }
 
         await LoadDiffAsync(client => client.GetFullThreadDiffAsync(SelectedThread!.Id, toTurn));
+    }
+
+    [RelayCommand]
+    private async Task RefreshGitStatusAsync()
+    {
+        var cwd = SelectedProject?.Detail;
+        if (!CanUseProjectCwd(cwd))
+        {
+            GitStatusText = "Select a project with a workspace path.";
+            return;
+        }
+
+        if (_shellSession is null)
+        {
+            GitStatusText = "Pair with a backend first.";
+            return;
+        }
+
+        try
+        {
+            GitStatusText = "Refreshing git status...";
+            var status = await new NativeGitClient(_shellSession).RefreshStatusAsync(cwd!);
+            GitStatusText = status.Summary;
+        }
+        catch (Exception error)
+        {
+            GitStatusText = error.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RunGitCommitAsync() => await RunGitActionAsync("commit");
+
+    [RelayCommand]
+    private async Task RunGitPushAsync() => await RunGitActionAsync("push");
+
+    [RelayCommand]
+    private async Task RunGitCommitPushAsync() => await RunGitActionAsync("commit_push");
+
+    [RelayCommand]
+    private async Task RunGitPrPrepAsync() => await RunGitActionAsync("commit_push_pr");
+
+    private async Task RunGitActionAsync(string action)
+    {
+        var cwd = SelectedProject?.Detail;
+        if (!CanUseProjectCwd(cwd))
+        {
+            GitStatusText = "Select a project with a workspace path.";
+            return;
+        }
+
+        if (_shellSession is null)
+        {
+            GitStatusText = "Pair with a backend first.";
+            return;
+        }
+
+        try
+        {
+            GitLogLines.Clear();
+            GitLogLines.Add($"Starting {action}...");
+            var client = new NativeGitClient(_shellSession);
+            await client.RunStackedActionAsync(
+                cwd!,
+                action,
+                string.IsNullOrWhiteSpace(GitCommitMessage) ? null : GitCommitMessage.Trim(),
+                line =>
+                {
+                    Dispatcher.UIThread.Post(() => GitLogLines.Add(line.Text));
+                    return Task.CompletedTask;
+                }
+            );
+            GitStatusText = $"{action} started. Progress is streaming below.";
+        }
+        catch (Exception error)
+        {
+            GitStatusText = error.Message;
+            GitLogLines.Add(error.Message);
+        }
     }
 
     private async Task LoadDiffAsync(Func<NativeDiffClient, Task<NativeDiffResult>> load)
@@ -444,6 +538,7 @@ public partial class MainViewModel : ViewModelBase
                 Projects.Add(ToProjectItem(project));
             }
 
+            SelectedProject = Projects.FirstOrDefault();
             Threads.Clear();
             foreach (var thread in update.Snapshot.Threads)
             {
@@ -571,6 +666,9 @@ public partial class MainViewModel : ViewModelBase
             instanceId = SelectedModel?.InstanceId ?? "codex",
             model = SelectedModel?.Model ?? "gpt-5.5",
         };
+
+    private static bool CanUseProjectCwd(string? cwd) =>
+        !string.IsNullOrWhiteSpace(cwd) && cwd != "No workspace path";
 
     partial void OnSelectedBackendChanged(DiscoveredBackendItem? value)
     {

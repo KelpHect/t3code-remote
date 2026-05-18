@@ -104,8 +104,8 @@ Purpose: turn the scaffold into a useful mobile client once protocol access exis
 
 - [x] Add unified diff viewer.
       Evidence: `NativeDiffClient` calls existing backend `orchestration.getTurnDiff` and `orchestration.getFullThreadDiff`, maps unified patch results into `NativeDiffResult`, and classifies ready/empty/binary states. `MainView.axaml` adds a Diff tab with turn-range inputs, turn/full-load buttons, explicit status text, and a read-only monospace text box with horizontal/vertical scrolling for large patches. `NativeDiffClientTests` covers request payloads, patch mapping, and empty/binary state classification.
-- [ ] Add git status and action progress UI.
-      Acceptance: commit, push, commit+push, and PR prep show progress logs through capabilities already available to the existing desktop/web app; any missing progress stream is handled in the native UX as a compatibility limitation, not as a backend change request.
+- [x] Add git status and action progress UI.
+      Evidence: `NativeGitClient` uses existing `vcs.refreshStatus` and streaming `git.runStackedAction` RPCs; it maps git status summaries and progress events into app-owned DTOs. `MainView.axaml` adds a Git tab with project-scoped status refresh, commit message input, Commit, Push, Commit+Push, and PR prep actions, plus a scrollable progress log. `NativeGitClientTests` covers status request/mapping and streamed action progress. Native UX uses the existing caller-scoped `git.runStackedAction` stream and does not require backend changes.
 - [ ] Add filesystem browse and clone/project creation.
       Acceptance: browse handles permission errors and large directories; clone reports progress and final project availability.
 - [ ] Add terminal scrollback and input.

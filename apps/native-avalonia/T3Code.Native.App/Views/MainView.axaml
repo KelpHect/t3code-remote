@@ -52,7 +52,10 @@
     <TabControl Grid.Row="1" Background="#101114">
       <TabItem Header="Projects" Foreground="#f2f5f9">
         <Border Background="#15171c" Padding="12">
-          <ListBox ItemsSource="{Binding Projects}" Background="Transparent" BorderThickness="0">
+          <ListBox ItemsSource="{Binding Projects}"
+                   SelectedItem="{Binding SelectedProject}"
+                   Background="Transparent"
+                   BorderThickness="0">
             <ListBox.ItemTemplate>
               <DataTemplate DataType="vm:ProjectShellItem">
                 <StackPanel Margin="0,4" Spacing="2">
@@ -150,6 +153,42 @@
                            FontSize="12"
                            Foreground="#e5e7eb"
                            Padding="10" />
+              </ScrollViewer>
+            </Border>
+          </Grid>
+        </Border>
+      </TabItem>
+
+      <TabItem Header="Git" Foreground="#f2f5f9">
+        <Border Background="#101114" Padding="16">
+          <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <TextBox Text="{Binding GitCommitMessage}" PlaceholderText="Commit message" />
+              <Button Grid.Column="1" Command="{Binding RefreshGitStatusCommand}" Content="Refresh" MinWidth="84" />
+            </Grid>
+            <StackPanel Grid.Row="1" Spacing="8">
+              <TextBlock Text="{Binding GitStatusText}" Foreground="#aab2c0" TextWrapping="Wrap" />
+              <WrapPanel>
+                <Button Command="{Binding RunGitCommitCommand}" Content="Commit" Margin="0,0,8,8" />
+                <Button Command="{Binding RunGitPushCommand}" Content="Push" Margin="0,0,8,8" />
+                <Button Command="{Binding RunGitCommitPushCommand}" Content="Commit+Push" Margin="0,0,8,8" />
+                <Button Command="{Binding RunGitPrPrepCommand}" Content="PR prep" Margin="0,0,8,8" />
+              </WrapPanel>
+            </StackPanel>
+            <Border Grid.Row="2" Background="#0d0f12" BorderBrush="#2a2f3a" BorderThickness="1">
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding GitLogLines}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding}"
+                                 Foreground="#e5e7eb"
+                                 FontFamily="Consolas, Menlo, monospace"
+                                 FontSize="12"
+                                 TextWrapping="Wrap"
+                                 Margin="10,4" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
               </ScrollViewer>
             </Border>
           </Grid>
