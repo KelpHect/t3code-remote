@@ -106,7 +106,7 @@ docs.
       Acceptance: Capacitor config exists, Android platform is generated under
       `apps/mobile/android/`, package id/display name are explicit, and
       `bun --cwd apps/mobile cap:sync:android` succeeds.
-- [ ] Wire `apps/mobile/` into the Bun workspace without changing
+- [x] Wire `apps/mobile/` into the Bun workspace without changing
       existing web/server/desktop behavior.
       Acceptance: root `bun install` recognizes the workspace; root
       `bun typecheck`, `bun lint`, and `bun run test` still target existing
