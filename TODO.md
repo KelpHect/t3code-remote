@@ -205,7 +205,11 @@ code and tests only.
       Acceptance: fixtures cover auth, request/response, shell subscription,
       thread subscription, command dispatch, diffs, filesystem, git, terminal,
       cancellation, and errors; no tokens or private paths are present.
-- [ ] Implement TypeScript existing-`/ws` transport.
+- [x] Implement TypeScript existing-`/ws` transport.
+      Evidence: `apps/mobile/src/client/ws/effectRpcTransport.ts` implements
+      the current Effect RPC `/ws` envelope with ws-token URL resolution,
+      decimal request ids, request/response promises, streaming chunks, chunk
+      acks, heartbeats, and stream interruption.
       Acceptance: transport connects with issued ws-token, sends request frames,
       resolves responses, streams subscription events, acks chunks if required,
       handles heartbeat, and cancels streams.
