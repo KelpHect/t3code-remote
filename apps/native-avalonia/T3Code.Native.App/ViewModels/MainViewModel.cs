@@ -12,6 +12,7 @@ using T3Code.Native.Client.Commands;
 using T3Code.Native.Client.Config;
 using T3Code.Native.Client.Diff;
 using T3Code.Native.Client.Git;
+using T3Code.Native.Client.Terminal;
 using T3Code.Native.Client.Discovery;
 using T3Code.Native.Client.Shell;
 using T3Code.Native.Client.Thread;
@@ -75,6 +76,11 @@ public partial class MainViewModel : ViewModelBase
     ];
 
     public ObservableCollection<WorkspaceEntryItem> WorkspaceEntries { get; } = [];
+
+    public ObservableCollection<string> TerminalLines { get; } =
+    [
+        "Open a terminal for the selected thread.",
+    ];
 
     public ObservableCollection<ModelSelectionItem> Models { get; } =
     [
@@ -142,6 +148,15 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _cloneDestinationPath = "";
 
+    [ObservableProperty]
+    private string _terminalCwd = "";
+
+    [ObservableProperty]
+    private string _terminalInput = "";
+
+    [ObservableProperty]
+    private string _terminalStatus = "No terminal open.";
+
     private readonly NativeAuthClient _authClient = new(new HttpClient());
     private readonly T3BackendDiscoveryClient _discoveryClient = new(new HttpClient());
     private readonly ISecretStore _secretStore = NativeAppServices.SecretStore;
@@ -149,6 +164,7 @@ public partial class MainViewModel : ViewModelBase
     private ExistingWsRpcSession? _shellSession;
     private IAsyncDisposable? _shellSubscription;
     private IAsyncDisposable? _threadSubscription;
+    private IAsyncDisposable? _terminalSubscription;
     private NativeThreadState _threadState = new();
 
     [RelayCommand]
@@ -456,6 +472,100 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    private async Task OpenTerminalAsync()
+    {
+        if (_shellSession is null || SelectedThread is null)
+        {
+            TerminalStatus = "Pair and select a thread first.";
+            return;
+        }
+
+        var cwd = string.IsNullOrWhiteSpace(TerminalCwd)
+            ? SelectedProject?.Detail
+            : TerminalCwd.Trim();
+        if (!CanUseProjectCwd(cwd))
+        {
+            TerminalStatus = "Enter a terminal cwd or select a project with a workspace path.";
+            return;
+        }
+
+        try
+        {
+            var client = new NativeTerminalClient(_shellSession);
+            _terminalSubscription ??= await client.SubscribeEventsAsync(eventItem =>
+            {
+                Dispatcher.UIThread.Post(() => ApplyTerminalEvent(eventItem));
+                return Task.CompletedTask;
+            });
+            var snapshot = await client.OpenAsync(SelectedThread.Id, "default", cwd!);
+            TerminalCwd = snapshot.Cwd;
+            TerminalLines.Clear();
+            AppendTerminalText(snapshot.History);
+            TerminalStatus = $"{snapshot.Status} - {snapshot.Cwd}";
+        }
+        catch (Exception error)
+        {
+            TerminalStatus = error.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SendTerminalInputAsync()
+    {
+        if (_shellSession is null || SelectedThread is null || string.IsNullOrEmpty(TerminalInput))
+        {
+            return;
+        }
+
+        try
+        {
+            var input = TerminalInput.EndsWith('\n') ? TerminalInput : $"{TerminalInput}\n";
+            TerminalInput = "";
+            await new NativeTerminalClient(_shellSession).WriteAsync(SelectedThread.Id, "default", input);
+        }
+        catch (Exception error)
+        {
+            TerminalStatus = error.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ClearTerminalAsync()
+    {
+        if (_shellSession is null || SelectedThread is null)
+        {
+            return;
+        }
+
+        await new NativeTerminalClient(_shellSession).ClearAsync(SelectedThread.Id, "default");
+        TerminalLines.Clear();
+    }
+
+    [RelayCommand]
+    private async Task RestartTerminalAsync()
+    {
+        if (_shellSession is null || SelectedThread is null || string.IsNullOrWhiteSpace(TerminalCwd))
+        {
+            TerminalStatus = "Open a terminal first.";
+            return;
+        }
+
+        await new NativeTerminalClient(_shellSession).RestartAsync(SelectedThread.Id, "default", TerminalCwd.Trim());
+    }
+
+    [RelayCommand]
+    private async Task CloseTerminalAsync()
+    {
+        if (_shellSession is null || SelectedThread is null)
+        {
+            return;
+        }
+
+        await new NativeTerminalClient(_shellSession).CloseAsync(SelectedThread.Id, "default");
+        TerminalStatus = "Terminal closed.";
+    }
+
     private async Task LoadDiffAsync(Func<NativeDiffClient, Task<NativeDiffResult>> load)
     {
         if (_shellSession is null || SelectedThread is null)
@@ -618,6 +728,7 @@ public partial class MainViewModel : ViewModelBase
     private async Task StopShellSubscriptionAsync()
     {
         await StopThreadSubscriptionAsync();
+        await StopTerminalSubscriptionAsync();
 
         if (_shellSubscription is not null)
         {
@@ -638,6 +749,15 @@ public partial class MainViewModel : ViewModelBase
         {
             await _threadSubscription.DisposeAsync();
             _threadSubscription = null;
+        }
+    }
+
+    private async Task StopTerminalSubscriptionAsync()
+    {
+        if (_terminalSubscription is not null)
+        {
+            await _terminalSubscription.DisposeAsync();
+            _terminalSubscription = null;
         }
     }
 
@@ -741,6 +861,50 @@ public partial class MainViewModel : ViewModelBase
         Status = string.IsNullOrWhiteSpace(_threadState.SessionStatus)
             ? $"Loaded {_threadState.Title}."
             : $"{_threadState.Title} - {_threadState.SessionStatus}.";
+    }
+
+    private void ApplyTerminalEvent(NativeTerminalEvent eventItem)
+    {
+        if (SelectedThread is null || eventItem.ThreadId != SelectedThread.Id)
+        {
+            return;
+        }
+
+        if (eventItem.Type == "cleared")
+        {
+            TerminalLines.Clear();
+            TerminalStatus = "Terminal cleared.";
+            return;
+        }
+
+        if (eventItem.Snapshot is not null)
+        {
+            TerminalCwd = eventItem.Snapshot.Cwd;
+            TerminalStatus = $"{eventItem.Snapshot.Status} - {eventItem.Snapshot.Cwd}";
+        }
+
+        AppendTerminalText(eventItem.Text);
+    }
+
+    private void AppendTerminalText(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        foreach (var line in text.Replace("\r\n", "\n").Split('\n'))
+        {
+            if (line.Length > 0)
+            {
+                TerminalLines.Add(line);
+            }
+        }
+
+        while (TerminalLines.Count > 1000)
+        {
+            TerminalLines.RemoveAt(0);
+        }
     }
 
     private static ChatLineItem ToChatLine(NativeThreadEntry entry) =>

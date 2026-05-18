@@ -108,8 +108,8 @@ Purpose: turn the scaffold into a useful mobile client once protocol access exis
       Evidence: `NativeGitClient` uses existing `vcs.refreshStatus` and streaming `git.runStackedAction` RPCs; it maps git status summaries and progress events into app-owned DTOs. `MainView.axaml` adds a Git tab with project-scoped status refresh, commit message input, Commit, Push, Commit+Push, and PR prep actions, plus a scrollable progress log. `NativeGitClientTests` covers status request/mapping and streamed action progress. Native UX uses the existing caller-scoped `git.runStackedAction` stream and does not require backend changes.
 - [x] Add filesystem browse and clone/project creation.
       Evidence: `NativeWorkspaceClient` calls existing `filesystem.browse`, `sourceControl.cloneRepository`, and `orchestration.dispatchCommand` for `project.create`, with command-outbox retention until project creation succeeds. `MainView.axaml` adds a Files tab with desktop path browse, virtualized entry list for large directories, add-project fields, and clone-and-add-project flow. Permission and clone failures surface as status text without backend changes. `NativeWorkspaceClientTests` covers browse request/mapping, clone result mapping, project-create payload, and outbox completion.
-- [ ] Add terminal scrollback and input.
-      Acceptance: open/write/resize/clear/restart/close work against backend terminal sessions, with bounded scrollback and reconnect handling.
+- [x] Add terminal scrollback and input.
+      Evidence: `NativeTerminalClient` wraps existing `terminal.open`, `terminal.write`, `terminal.resize`, `terminal.clear`, `terminal.restart`, `terminal.close`, and `subscribeTerminalEvents` RPCs. `MainView.axaml` adds a Terminal tab with cwd, open/clear/restart/close controls, bounded scrollback, and input send. `MainViewModel` filters terminal events to the selected thread, applies clear/restart/status events, and caps scrollback at 1000 lines. `NativeTerminalClientTests` covers open/write request shapes and output event subscription mapping.
 
 ## P4 - Mobile Platform Hardening
 
