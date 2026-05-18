@@ -2,6 +2,7 @@
 using Android.Runtime;
 using Avalonia;
 using Avalonia.Android;
+using T3Code.Native.App.Android.Security;
 
 namespace T3Code.Native.App.Android
 {
@@ -14,6 +15,7 @@ namespace T3Code.Native.App.Android
 
         protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
         {
+            NativeAppServices.SecretStore = new AndroidSecretStore(this);
             return base.CustomizeAppBuilder(builder)
             .WithInterFont();
         }

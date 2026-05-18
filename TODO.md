@@ -82,9 +82,8 @@ Purpose: make the reusable native client robust enough for mobile sleep/VPN tran
       Evidence: `RefreshingExistingWsRpcSession` issues short-lived `/ws` URLs through `IExistingWsUriProvider`, retries authentication failures once with a fresh token, reconnects through `ExistingWsRpcSession.ReconnectAsync(Uri, ...)`, and lets the existing replay filter resend only active operations. `BearerTokenExistingWsUriProvider` renews ws-tokens from the stored bearer token. `RefreshingExistingWsRpcSessionTests` covers expired-token reconnect, active request replay, canceled subscription non-replay, and final auth denial through `ExistingWsAuthenticationException`.
 - [x] Add bounded backoff and network-state reporting.
       Evidence: `NativeReconnectLoop` wraps a reconnectable session with `NativeConnectionState` updates for connecting, connected, disconnected, reconnecting, waiting-to-retry, offline, and cancelled states. `BoundedExponentialBackoff` caps retry delays. `NativeReconnectLoopTests` covers transient disconnect/reconnect, repeated failures with capped delay and offline reporting, and cancellation without retry.
-- [ ] Replace in-memory production token storage with platform secure storage.
-      Evidence: `MemorySecretStore` exists and is documented as spike-only.
-      Acceptance: Android uses a secure platform-backed store or a clearly isolated adapter, with tests for save/load/clear semantics.
+- [x] Replace in-memory production token storage with platform secure storage.
+      Evidence: `NativeAppServices.SecretStore` defaults to `MemorySecretStore` for desktop/tests, while the Android host installs `AndroidSecretStore` during app-builder setup. `AndroidSecretStore` encrypts bearer tokens with an Android KeyStore AES-GCM key and stores only ciphertext/IV in private shared preferences. `NativeAuthClientTests` covers save/load/clear semantics for the shared `ISecretStore` contract, and Android build validation covers the platform adapter.
 
 ## P3 - Native UX Parity For Core Workflows
 

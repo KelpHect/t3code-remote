@@ -91,7 +91,7 @@ public partial class MainViewModel : ViewModelBase
 
     private readonly NativeAuthClient _authClient = new(new HttpClient());
     private readonly T3BackendDiscoveryClient _discoveryClient = new(new HttpClient());
-    private readonly ISecretStore _secretStore = new MemorySecretStore();
+    private readonly ISecretStore _secretStore = NativeAppServices.SecretStore;
     private ExistingWsRpcSession? _shellSession;
     private IAsyncDisposable? _shellSubscription;
 

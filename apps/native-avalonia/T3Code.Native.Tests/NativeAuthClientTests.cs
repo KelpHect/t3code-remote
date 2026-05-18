@@ -80,6 +80,19 @@ public sealed class NativeAuthClientTests
         Assert.Equal("ws-token", result.Token);
     }
 
+    [Fact]
+    public async Task MemorySecretStoreSavesLoadsAndClearsByBackendAuthority()
+    {
+        var store = new MemorySecretStore();
+        var backend = new Uri("http://example.test:3773");
+
+        await store.SaveBearerTokenAsync(backend, "bearer-token");
+        Assert.Equal("bearer-token", await store.GetBearerTokenAsync(new Uri("http://example.test:3773/path")));
+
+        await store.ClearBearerTokenAsync(backend);
+        Assert.Null(await store.GetBearerTokenAsync(backend));
+    }
+
     private sealed class StaticResponseHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> respond)
         : HttpMessageHandler
     {
