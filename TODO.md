@@ -213,7 +213,11 @@ code and tests only.
       Acceptance: transport connects with issued ws-token, sends request frames,
       resolves responses, streams subscription events, acks chunks if required,
       handles heartbeat, and cancels streams.
-- [ ] Add drift fixture tests.
+- [x] Add drift fixture tests.
+      Evidence: `apps/mobile/tests/unit/wsFixtureDrift.spec.ts` validates the
+      redacted current-backend `/ws` fixture and replays representative
+      request/response, stream ack, and interrupt frames through the mobile
+      transport.
       Acceptance: tests replay captured frames and fail with method/envelope
       names when current backend shapes change.
 - [ ] Keep private wire parsing out of Vue components and stores.
