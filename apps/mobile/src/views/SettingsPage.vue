@@ -83,7 +83,16 @@
               label-placement="stacked"
               placeholder="Paste pairing token"
               :rows="2"
+              :value="pairingInput"
+              @ionInput="pairingInput = String($event.detail.value ?? '')"
             />
+          </ion-item>
+          <ion-item v-if="pairingMessage">
+            <ion-icon slot="start" :icon="pairingMessageIcon" />
+            <ion-label>
+              <h2>{{ pairingMessageTitle }}</h2>
+              <p>{{ pairingMessage }}</p>
+            </ion-label>
           </ion-item>
           <ion-item>
             <ion-icon slot="start" :icon="shieldCheckmarkOutline" />
@@ -93,7 +102,15 @@
             </ion-label>
           </ion-item>
           <ion-item>
-            <ion-button expand="block" class="primary-action">Pair backend</ion-button>
+            <ion-button
+              expand="block"
+              class="primary-action"
+              :disabled="pairingState === 'pairing'"
+              @click="pairBackend"
+            >
+              <ion-spinner v-if="pairingState === 'pairing'" name="crescent" />
+              <span v-else>Pair backend</span>
+            </ion-button>
           </ion-item>
         </ion-list>
 
@@ -153,6 +170,7 @@ import {
 } from "@ionic/vue";
 import {
   analyticsOutline,
+  checkmarkCircleOutline,
   keyOutline,
   linkOutline,
   menuOutline,
@@ -160,8 +178,10 @@ import {
   phonePortraitOutline,
   scanOutline,
   shieldCheckmarkOutline,
+  warningOutline,
 } from "ionicons/icons";
 
+import { bootstrapBearerSession } from "@/client/auth";
 import { useConnectionState } from "@/client/connectionState";
 
 const {
@@ -171,12 +191,16 @@ const {
   probeResults,
   scanBackends,
   selectedBackend,
+  setBearerSession,
   setManualUrl,
   statusDetail,
   statusText,
 } = useConnectionState();
 
 const darkMode = ref(document.body.classList.contains("dark"));
+const pairingInput = ref("");
+const pairingState = ref<"idle" | "pairing" | "paired" | "failed">("idle");
+const pairingMessage = ref("");
 
 const diagnosticsText = computed(() => {
   if (discoveryState.value === "scanning") {
@@ -190,6 +214,35 @@ const diagnosticsText = computed(() => {
   }
   return "Discovery will run automatically while the app is open.";
 });
+
+const pairingMessageTitle = computed(() =>
+  pairingState.value === "paired" ? "Backend paired" : "Pairing failed",
+);
+
+const pairingMessageIcon = computed(() =>
+  pairingState.value === "paired" ? checkmarkCircleOutline : warningOutline,
+);
+
+const pairBackend = async () => {
+  const backendUrl = selectedBackend.value?.candidate.url ?? manualUrl.value;
+  pairingState.value = "pairing";
+  pairingMessage.value = "";
+
+  try {
+    const session = await bootstrapBearerSession({
+      backendUrl,
+      pairingInput: pairingInput.value,
+    });
+    setBearerSession(session);
+    pairingInput.value = "";
+    pairingState.value = "paired";
+    pairingMessage.value = "Bearer session is active for this mobile client.";
+  } catch (error) {
+    setBearerSession(null);
+    pairingState.value = "failed";
+    pairingMessage.value = error instanceof Error ? error.message : "Pairing failed.";
+  }
+};
 
 const setDarkMode = (event: { detail: { checked: boolean } }) => {
   darkMode.value = event.detail.checked;

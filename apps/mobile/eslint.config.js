@@ -14,6 +14,7 @@ const browserGlobals = {
   Response: "readonly",
   setTimeout: "readonly",
   URL: "readonly",
+  URLSearchParams: "readonly",
   window: "readonly",
   Window: "readonly",
 };

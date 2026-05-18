@@ -163,7 +163,11 @@ endpoints or change existing auth behavior.
 
 ### Pairing
 
-- [ ] Implement bearer pairing through `POST /api/auth/bootstrap/bearer`.
+- [x] Implement bearer pairing through `POST /api/auth/bootstrap/bearer`.
+      Evidence: `apps/mobile/src/client/auth.ts` resolves manual tokens and
+      pairing URLs, posts to `/api/auth/bootstrap/bearer`, validates
+      `sessionToken`, and the settings pairing form exchanges credentials into
+      an in-memory bearer session without logging tokens.
       Acceptance: request accepts pairing token or URL, extracts token from URL
       fragments, decodes the existing `sessionToken` response field, and never
       logs credentials.

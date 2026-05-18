@@ -1,5 +1,6 @@
 import { computed, ref } from "vue";
 
+import { BearerSession } from "./auth";
 import {
   BackendCandidate,
   generateBackendCandidates,
@@ -13,6 +14,7 @@ const manualUrl = ref("");
 const candidates = ref<readonly BackendCandidate[]>([]);
 const probeResults = ref<readonly SessionProbeResult[]>([]);
 const selectedBackend = ref<SessionProbeResult | null>(null);
+const bearerSession = ref<BearerSession | null>(null);
 const discoveryState = ref<DiscoveryState>("idle");
 const lastScanStartedAt = ref<number | null>(null);
 const lastScanFinishedAt = ref<number | null>(null);
@@ -29,6 +31,7 @@ const lastError = computed(() => {
   return firstFailure?.message ?? "No scan has run yet.";
 });
 const statusText = computed(() => {
+  if (bearerSession.value) return "Paired";
   if (selectedBackend.value) {
     if (discoveryState.value === "scanning") return "Checking live";
     return selectedBackend.value.authenticated ? "Connected" : "Backend found";
@@ -38,6 +41,9 @@ const statusText = computed(() => {
   return "Not connected";
 });
 const statusDetail = computed(() => {
+  if (bearerSession.value && selectedBackend.value) {
+    return `Paired with ${selectedBackend.value.candidate.url}`;
+  }
   if (selectedBackend.value) {
     const prefix =
       discoveryState.value === "scanning" ? "Refreshing" : selectedBackend.value.candidate.label;
@@ -137,8 +143,13 @@ function setManualUrl(value: string) {
   manualUrl.value = value;
 }
 
+function setBearerSession(session: BearerSession | null) {
+  bearerSession.value = session;
+}
+
 export function useConnectionState() {
   return {
+    bearerSession,
     candidateCount,
     candidates,
     discoveryState,
@@ -149,6 +160,7 @@ export function useConnectionState() {
     probeResults,
     scanBackends,
     selectedBackend,
+    setBearerSession,
     setManualUrl,
     startDiscoveryLoop,
     statusDetail,
