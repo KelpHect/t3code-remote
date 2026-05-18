@@ -46,6 +46,9 @@ public partial class MainViewModel : ViewModelBase
     private bool _isScanning;
 
     [ObservableProperty]
+    private string _activeSection = "Projects";
+
+    [ObservableProperty]
     private DiscoveredBackendItem? _selectedBackend;
 
     [ObservableProperty]
@@ -167,6 +170,29 @@ public partial class MainViewModel : ViewModelBase
     private IAsyncDisposable? _threadSubscription;
     private IAsyncDisposable? _terminalSubscription;
     private NativeThreadState _threadState = new();
+
+    public bool IsProjectsSection => ActiveSection == "Projects";
+
+    public bool IsThreadsSection => ActiveSection == "Threads";
+
+    public bool IsChatSection => ActiveSection == "Chat";
+
+    public bool IsDiffSection => ActiveSection == "Diff";
+
+    public bool IsGitSection => ActiveSection == "Git";
+
+    public bool IsFilesSection => ActiveSection == "Files";
+
+    public bool IsTerminalSection => ActiveSection == "Terminal";
+
+    [RelayCommand]
+    private void SelectSection(string section)
+    {
+        if (!string.IsNullOrWhiteSpace(section))
+        {
+            ActiveSection = section;
+        }
+    }
 
     [RelayCommand]
     private async Task ScanBackendsAsync()
@@ -969,6 +995,17 @@ public partial class MainViewModel : ViewModelBase
         {
             _ = LoadThreadAsync(value);
         }
+    }
+
+    partial void OnActiveSectionChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsProjectsSection));
+        OnPropertyChanged(nameof(IsThreadsSection));
+        OnPropertyChanged(nameof(IsChatSection));
+        OnPropertyChanged(nameof(IsDiffSection));
+        OnPropertyChanged(nameof(IsGitSection));
+        OnPropertyChanged(nameof(IsFilesSection));
+        OnPropertyChanged(nameof(IsTerminalSection));
     }
 }
 

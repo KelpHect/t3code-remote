@@ -3,266 +3,371 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:T3Code.Native.App.ViewModels"
-             mc:Ignorable="d" d:DesignWidth="1120" d:DesignHeight="760"
+             mc:Ignorable="d"
+             d:DesignWidth="390"
+             d:DesignHeight="844"
              x:Class="T3Code.Native.App.Views.MainView"
              x:DataType="vm:MainViewModel">
   <Design.DataContext>
-    <!-- This only sets the DataContext for the previewer in an IDE,
-         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
     <vm:MainViewModel />
   </Design.DataContext>
 
-  <Grid RowDefinitions="Auto,*,Auto" Background="#101114">
-    <Border Grid.Row="0" Background="#17191f" BorderBrush="#2a2f3a" BorderThickness="0,0,0,1" Padding="16,12">
-      <StackPanel Spacing="8">
-        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-          <Button Grid.Column="0"
-                  Command="{Binding ScanBackendsCommand}"
-                  Content="Scan"
-                  MinWidth="76" />
-          <TextBox Grid.Column="1"
-                   Text="{Binding BaseUrl}"
-                   PlaceholderText="Discover or enter http://vpn-or-lan-ip:3773" />
-          <Button Grid.Column="2"
-                  Command="{Binding PairCommand}"
-                  Content="Pair"
-                  MinWidth="76" />
+  <Grid RowDefinitions="Auto,Auto,*,Auto"
+        Background="#0f1115">
+    <Border Grid.Row="0"
+            Background="#151820"
+            BorderBrush="#252b36"
+            BorderThickness="0,0,0,1"
+            Padding="14,12">
+      <StackPanel Spacing="10">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+          <StackPanel Spacing="2">
+            <TextBlock Text="T3 Code"
+                       Foreground="#f4f7fb"
+                       FontSize="18"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{Binding Protocol}"
+                       Foreground="#8d96a8"
+                       FontSize="12"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+          <Border Grid.Column="1"
+                  Background="#101318"
+                  BorderBrush="#2d3441"
+                  BorderThickness="1"
+                  CornerRadius="5"
+                  Padding="9,5"
+                  VerticalAlignment="Top">
+            <TextBlock Text="{Binding ServerName}"
+                       Foreground="#d9e2f1"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       TextTrimming="CharacterEllipsis"
+                       MaxWidth="130" />
+          </Border>
         </Grid>
+
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <TextBox Text="{Binding BaseUrl}"
+                   PlaceholderText="Discover or enter backend URL" />
+          <Button Grid.Column="1"
+                  Command="{Binding ScanBackendsCommand}"
+                  Content="Scan" />
+        </Grid>
+
         <ComboBox ItemsSource="{Binding DiscoveredBackends}"
                   SelectedItem="{Binding SelectedBackend}"
-                  HorizontalAlignment="Stretch">
+                  HorizontalAlignment="Stretch"
+                  MaxHeight="44">
           <ComboBox.ItemTemplate>
             <DataTemplate DataType="vm:DiscoveredBackendItem">
               <StackPanel Spacing="2">
-                <TextBlock Text="{Binding BaseUrl}" Foreground="#f2f5f9" />
-                <TextBlock Text="{Binding Source}" Foreground="#8c95a4" FontSize="12" />
+                <TextBlock Text="{Binding BaseUrl}"
+                           Foreground="#f4f7fb"
+                           FontSize="13" />
+                <TextBlock Text="{Binding Source}"
+                           Foreground="#8d96a8"
+                           FontSize="12" />
               </StackPanel>
             </DataTemplate>
           </ComboBox.ItemTemplate>
         </ComboBox>
-        <TextBox Text="{Binding PairingToken}"
-                 PlaceholderText="Pairing token or URL" />
-        <StackPanel Spacing="2">
-          <TextBlock Text="{Binding ServerName}" Foreground="#f2f5f9" FontWeight="SemiBold" TextWrapping="Wrap" />
-          <TextBlock Text="{Binding Protocol}" Foreground="#aab2c0" FontSize="12" />
-        </StackPanel>
+
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <TextBox Text="{Binding PairingToken}"
+                   PlaceholderText="Pairing token or URL" />
+          <Button Grid.Column="1"
+                  Command="{Binding PairCommand}"
+                  Content="Pair" />
+        </Grid>
       </StackPanel>
     </Border>
 
-    <TabControl Grid.Row="1" Background="#101114">
-      <TabItem Header="Projects" Foreground="#f2f5f9">
-        <Border Background="#15171c" Padding="12">
-          <ListBox ItemsSource="{Binding Projects}"
+    <Border Grid.Row="1"
+            Background="#101318"
+            BorderBrush="#252b36"
+            BorderThickness="0,0,0,1"
+            Padding="8,8">
+      <WrapPanel>
+        <Button Command="{Binding SelectSectionCommand}" CommandParameter="Projects" Content="Projects" FontSize="13" MinHeight="36" Padding="11,7" Margin="0,0,6,6" />
+        <Button Command="{Binding SelectSectionCommand}" CommandParameter="Threads" Content="Threads" FontSize="13" MinHeight="36" Padding="11,7" Margin="0,0,6,6" />
+        <Button Command="{Binding SelectSectionCommand}" CommandParameter="Chat" Content="Chat" FontSize="13" MinHeight="36" Padding="11,7" Margin="0,0,6,6" />
+        <Button Command="{Binding SelectSectionCommand}" CommandParameter="Diff" Content="Diff" FontSize="13" MinHeight="36" Padding="11,7" Margin="0,0,6,6" />
+        <Button Command="{Binding SelectSectionCommand}" CommandParameter="Git" Content="Git" FontSize="13" MinHeight="36" Padding="11,7" Margin="0,0,6,6" />
+        <Button Command="{Binding SelectSectionCommand}" CommandParameter="Files" Content="Files" FontSize="13" MinHeight="36" Padding="11,7" Margin="0,0,6,6" />
+        <Button Command="{Binding SelectSectionCommand}" CommandParameter="Terminal" Content="Terminal" FontSize="13" MinHeight="36" Padding="11,7" Margin="0,0,6,6" />
+      </WrapPanel>
+    </Border>
+
+    <Grid Grid.Row="2" Background="#0f1115">
+      <Border IsVisible="{Binding IsProjectsSection}" Padding="12">
+        <Grid RowDefinitions="Auto,*" RowSpacing="10">
+          <TextBlock Text="Projects"
+                     Foreground="#f4f7fb"
+                     FontSize="20"
+                     FontWeight="SemiBold" />
+          <ListBox Grid.Row="1"
+                   ItemsSource="{Binding Projects}"
                    SelectedItem="{Binding SelectedProject}"
                    Background="Transparent"
                    BorderThickness="0">
             <ListBox.ItemTemplate>
               <DataTemplate DataType="vm:ProjectShellItem">
-                <StackPanel Margin="0,4" Spacing="2">
-                  <TextBlock Text="{Binding Title}" Foreground="#f2f5f9" FontWeight="SemiBold" />
-                  <TextBlock Text="{Binding Detail}" Foreground="#8c95a4" FontSize="12" TextWrapping="Wrap" />
-                </StackPanel>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
-        </Border>
-      </TabItem>
-
-      <TabItem Header="Threads" Foreground="#f2f5f9">
-        <Border Background="#181b21" Padding="12">
-        <Grid RowDefinitions="Auto,Auto,*">
-            <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,12">
-              <ComboBox ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" HorizontalAlignment="Stretch">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate DataType="vm:ModelSelectionItem">
-                    <TextBlock Text="{Binding Label}" />
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
-              <ComboBox ItemsSource="{Binding RuntimeModes}" SelectedItem="{Binding SelectedRuntimeMode}" HorizontalAlignment="Stretch" />
-              <ComboBox ItemsSource="{Binding InteractionModes}" SelectedItem="{Binding SelectedInteractionMode}" HorizontalAlignment="Stretch" />
-            </StackPanel>
-            <ListBox Grid.Row="2"
-                     ItemsSource="{Binding Threads}"
-                     SelectedItem="{Binding SelectedThread}"
-                     Background="Transparent"
-                     BorderThickness="0">
-            <ListBox.ItemTemplate>
-              <DataTemplate DataType="vm:ThreadShellItem">
-                <StackPanel Margin="0,4" Spacing="2">
-                  <TextBlock Text="{Binding Title}" Foreground="#f2f5f9" FontWeight="SemiBold" />
-                  <TextBlock Text="{Binding Detail}" Foreground="#8c95a4" FontSize="12" TextWrapping="Wrap" />
-                </StackPanel>
+                <Border Background="#151820"
+                        BorderBrush="#252b36"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="12"
+                        Margin="0,0,0,8">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding Title}" Foreground="#f4f7fb" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Detail}" Foreground="#8d96a8" FontSize="12" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
         </Grid>
-        </Border>
-      </TabItem>
+      </Border>
 
-      <TabItem Header="Chat" Foreground="#f2f5f9">
-        <Border Background="#101114" Padding="16">
-        <Grid RowDefinitions="Auto,*,Auto">
-          <TextBlock Text="Chat" Foreground="#f2f5f9" FontSize="20" FontWeight="SemiBold" />
+      <Border IsVisible="{Binding IsThreadsSection}" Padding="12">
+        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
+          <TextBlock Text="Threads"
+                     Foreground="#f4f7fb"
+                     FontSize="20"
+                     FontWeight="SemiBold" />
+          <StackPanel Grid.Row="1" Spacing="8">
+            <ComboBox ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" HorizontalAlignment="Stretch">
+              <ComboBox.ItemTemplate>
+                <DataTemplate DataType="vm:ModelSelectionItem">
+                  <TextBlock Text="{Binding Label}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+              <ComboBox ItemsSource="{Binding RuntimeModes}" SelectedItem="{Binding SelectedRuntimeMode}" />
+              <ComboBox Grid.Column="1" ItemsSource="{Binding InteractionModes}" SelectedItem="{Binding SelectedInteractionMode}" />
+            </Grid>
+          </StackPanel>
+          <ListBox Grid.Row="2"
+                   ItemsSource="{Binding Threads}"
+                   SelectedItem="{Binding SelectedThread}"
+                   Background="Transparent"
+                   BorderThickness="0">
+            <ListBox.ItemTemplate>
+              <DataTemplate DataType="vm:ThreadShellItem">
+                <Border Background="#151820"
+                        BorderBrush="#252b36"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="12"
+                        Margin="0,0,0,8">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding Title}" Foreground="#f4f7fb" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Detail}" Foreground="#8d96a8" FontSize="12" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+
+      <Border IsVisible="{Binding IsChatSection}" Padding="12">
+        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+          <TextBlock Text="Chat"
+                     Foreground="#f4f7fb"
+                     FontSize="20"
+                     FontWeight="SemiBold" />
           <ListBox Grid.Row="1"
-                   Margin="0,12"
                    ItemsSource="{Binding ChatLines}"
                    Background="Transparent"
                    BorderThickness="0">
             <ListBox.ItemTemplate>
-                <DataTemplate DataType="vm:ChatLineItem">
-                  <Border Background="{Binding Background}"
-                          BorderBrush="{Binding BorderBrush}"
+              <DataTemplate DataType="vm:ChatLineItem">
+                <Border Background="{Binding Background}"
+                        BorderBrush="{Binding BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="10"
+                        Margin="0,0,0,8">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding Speaker}" Foreground="{Binding SpeakerForeground}" FontSize="12" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Text}" Foreground="#f4f7fb" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <StackPanel Grid.Row="2" Spacing="8">
+            <TextBox Text="{Binding ComposerText}" PlaceholderText="Send a turn" MinHeight="76" AcceptsReturn="True" />
+            <WrapPanel>
+              <Button Command="{Binding QueueComposerCommand}" Content="Send" Margin="0,0,8,8" />
+              <Button Command="{Binding ContinueThreadCommand}" Content="Continue" Margin="0,0,8,8" />
+              <Button Command="{Binding StopThreadCommand}" Content="Stop" Margin="0,0,8,8" />
+            </WrapPanel>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Border IsVisible="{Binding IsDiffSection}" Padding="12">
+        <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
+          <TextBlock Text="Diff"
+                     Foreground="#f4f7fb"
+                     FontSize="20"
+                     FontWeight="SemiBold" />
+          <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="8">
+            <TextBox Text="{Binding DiffFromTurn}" PlaceholderText="From" />
+            <TextBox Grid.Column="1" Text="{Binding DiffToTurn}" PlaceholderText="To" />
+          </Grid>
+          <StackPanel Grid.Row="2" Spacing="8">
+            <WrapPanel>
+              <Button Command="{Binding LoadTurnDiffCommand}" Content="Turn diff" Margin="0,0,8,8" />
+              <Button Command="{Binding LoadFullThreadDiffCommand}" Content="Full diff" Margin="0,0,8,8" />
+            </WrapPanel>
+            <TextBlock Text="{Binding DiffStatus}" Foreground="#aab4c4" TextWrapping="Wrap" />
+          </StackPanel>
+          <Border Grid.Row="3" Background="#0b0d10" BorderBrush="#252b36" BorderThickness="1" CornerRadius="6">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+              <TextBlock Text="{Binding DiffText}"
+                         TextWrapping="NoWrap"
+                         FontFamily="Consolas, Menlo, monospace"
+                         FontSize="12"
+                         Foreground="#e5e7eb"
+                         Padding="10" />
+            </ScrollViewer>
+          </Border>
+        </Grid>
+      </Border>
+
+      <Border IsVisible="{Binding IsGitSection}" Padding="12">
+        <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
+          <TextBlock Text="Git"
+                     Foreground="#f4f7fb"
+                     FontSize="20"
+                     FontWeight="SemiBold" />
+          <TextBox Grid.Row="1" Text="{Binding GitCommitMessage}" PlaceholderText="Commit message" />
+          <StackPanel Grid.Row="2" Spacing="8">
+            <WrapPanel>
+              <Button Command="{Binding RefreshGitStatusCommand}" Content="Refresh" Margin="0,0,8,8" />
+              <Button Command="{Binding RunGitCommitCommand}" Content="Commit" Margin="0,0,8,8" />
+              <Button Command="{Binding RunGitPushCommand}" Content="Push" Margin="0,0,8,8" />
+              <Button Command="{Binding RunGitCommitPushCommand}" Content="Commit + push" Margin="0,0,8,8" />
+              <Button Command="{Binding RunGitPrPrepCommand}" Content="PR prep" Margin="0,0,8,8" />
+            </WrapPanel>
+            <TextBlock Text="{Binding GitStatusText}" Foreground="#aab4c4" TextWrapping="Wrap" />
+          </StackPanel>
+          <Border Grid.Row="3" Background="#0b0d10" BorderBrush="#252b36" BorderThickness="1" CornerRadius="6">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding GitLogLines}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding}"
+                               Foreground="#e5e7eb"
+                               FontFamily="Consolas, Menlo, monospace"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Margin="10,4" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Border>
+        </Grid>
+      </Border>
+
+      <Border IsVisible="{Binding IsFilesSection}" Padding="12">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="10">
+            <TextBlock Text="Files"
+                       Foreground="#f4f7fb"
+                       FontSize="20"
+                       FontWeight="SemiBold" />
+            <TextBox Text="{Binding BrowsePath}" PlaceholderText="Path to browse on desktop backend" />
+            <Button Command="{Binding BrowseWorkspaceCommand}" Content="Browse" HorizontalAlignment="Stretch" />
+            <TextBlock Text="{Binding WorkspaceStatus}" Foreground="#aab4c4" TextWrapping="Wrap" />
+            <ItemsControl ItemsSource="{Binding WorkspaceEntries}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="vm:WorkspaceEntryItem">
+                  <Border Background="#151820"
+                          BorderBrush="#252b36"
                           BorderThickness="1"
                           CornerRadius="6"
                           Padding="10"
                           Margin="0,0,0,8">
-                    <StackPanel Spacing="4">
-                      <TextBlock Text="{Binding Speaker}" Foreground="{Binding SpeakerForeground}" FontSize="12" FontWeight="SemiBold" />
-                      <TextBlock Text="{Binding Text}" Foreground="#f2f5f9" TextWrapping="Wrap" />
+                    <StackPanel Spacing="3">
+                      <TextBlock Text="{Binding Name}" Foreground="#f4f7fb" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding FullPath}" Foreground="#8d96a8" FontSize="12" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
                 </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
-            <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-            <TextBox Text="{Binding ComposerText}" PlaceholderText="Send a turn" MinHeight="44" AcceptsReturn="True" />
-              <Button Grid.Column="1" Command="{Binding ContinueThreadCommand}" Content="Continue" MinWidth="88" />
-              <Button Grid.Column="2" Command="{Binding StopThreadCommand}" Content="Stop" MinWidth="64" />
-              <Button Grid.Column="3" Command="{Binding QueueComposerCommand}" Content="Send" MinWidth="76" />
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBox Text="{Binding ProjectTitle}" PlaceholderText="Project title" />
+            <TextBox Text="{Binding ProjectWorkspacePath}" PlaceholderText="Workspace path" />
+            <Button Command="{Binding CreateProjectCommand}" Content="Add project" HorizontalAlignment="Stretch" />
+            <TextBox Text="{Binding CloneRemoteUrl}" PlaceholderText="Repository URL" />
+            <TextBox Text="{Binding CloneDestinationPath}" PlaceholderText="Clone destination path" />
+            <Button Command="{Binding CloneRepositoryCommand}" Content="Clone and add project" HorizontalAlignment="Stretch" />
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <Border IsVisible="{Binding IsTerminalSection}" Padding="12">
+        <Grid RowDefinitions="*,Auto" RowSpacing="8">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="10">
+              <TextBlock Text="Terminal"
+                         Foreground="#f4f7fb"
+                         FontSize="20"
+                         FontWeight="SemiBold" />
+              <TextBox Text="{Binding TerminalCwd}" PlaceholderText="Terminal cwd" />
+              <WrapPanel>
+                <Button Command="{Binding OpenTerminalCommand}" Content="Open" Margin="0,0,8,8" />
+                <Button Command="{Binding ClearTerminalCommand}" Content="Clear" Margin="0,0,8,8" />
+                <Button Command="{Binding RestartTerminalCommand}" Content="Restart" Margin="0,0,8,8" />
+                <Button Command="{Binding CloseTerminalCommand}" Content="Close" Margin="0,0,8,8" />
+              </WrapPanel>
+              <TextBlock Text="{Binding TerminalStatus}" Foreground="#aab4c4" TextWrapping="Wrap" />
+              <Border Background="#0b0d10"
+                      BorderBrush="#252b36"
+                      BorderThickness="1"
+                      CornerRadius="6"
+                      MinHeight="92">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                  <ItemsControl ItemsSource="{Binding TerminalLines}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding}"
+                                   Foreground="#e5e7eb"
+                                   FontFamily="Consolas, Menlo, monospace"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"
+                                   Margin="10,3" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+          <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox Text="{Binding TerminalInput}" PlaceholderText="Terminal input" />
+            <Button Grid.Column="1" Command="{Binding SendTerminalInputCommand}" Content="Send" />
           </Grid>
         </Grid>
       </Border>
-      </TabItem>
+    </Grid>
 
-      <TabItem Header="Diff" Foreground="#f2f5f9">
-        <Border Background="#101114" Padding="16">
-          <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
-            <Grid ColumnDefinitions="*,*,Auto,Auto" ColumnSpacing="8">
-              <TextBox Text="{Binding DiffFromTurn}" PlaceholderText="From" />
-              <TextBox Grid.Column="1" Text="{Binding DiffToTurn}" PlaceholderText="To" />
-              <Button Grid.Column="2" Command="{Binding LoadTurnDiffCommand}" Content="Turn" MinWidth="72" />
-              <Button Grid.Column="3" Command="{Binding LoadFullThreadDiffCommand}" Content="Full" MinWidth="72" />
-            </Grid>
-            <TextBlock Grid.Row="1" Text="{Binding DiffStatus}" Foreground="#aab2c0" TextWrapping="Wrap" />
-            <Border Grid.Row="2" Background="#0d0f12" BorderBrush="#2a2f3a" BorderThickness="1">
-              <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                <TextBlock Text="{Binding DiffText}"
-                           TextWrapping="NoWrap"
-                           FontFamily="Consolas, Menlo, monospace"
-                           FontSize="12"
-                           Foreground="#e5e7eb"
-                           Padding="10" />
-              </ScrollViewer>
-            </Border>
-          </Grid>
-        </Border>
-      </TabItem>
-
-      <TabItem Header="Git" Foreground="#f2f5f9">
-        <Border Background="#101114" Padding="16">
-          <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-              <TextBox Text="{Binding GitCommitMessage}" PlaceholderText="Commit message" />
-              <Button Grid.Column="1" Command="{Binding RefreshGitStatusCommand}" Content="Refresh" MinWidth="84" />
-            </Grid>
-            <StackPanel Grid.Row="1" Spacing="8">
-              <TextBlock Text="{Binding GitStatusText}" Foreground="#aab2c0" TextWrapping="Wrap" />
-              <WrapPanel>
-                <Button Command="{Binding RunGitCommitCommand}" Content="Commit" Margin="0,0,8,8" />
-                <Button Command="{Binding RunGitPushCommand}" Content="Push" Margin="0,0,8,8" />
-                <Button Command="{Binding RunGitCommitPushCommand}" Content="Commit+Push" Margin="0,0,8,8" />
-                <Button Command="{Binding RunGitPrPrepCommand}" Content="PR prep" Margin="0,0,8,8" />
-              </WrapPanel>
-            </StackPanel>
-            <Border Grid.Row="2" Background="#0d0f12" BorderBrush="#2a2f3a" BorderThickness="1">
-              <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding GitLogLines}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding}"
-                                 Foreground="#e5e7eb"
-                                 FontFamily="Consolas, Menlo, monospace"
-                                 FontSize="12"
-                                 TextWrapping="Wrap"
-                                 Margin="10,4" />
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </ScrollViewer>
-            </Border>
-          </Grid>
-        </Border>
-      </TabItem>
-
-      <TabItem Header="Files" Foreground="#f2f5f9">
-        <Border Background="#101114" Padding="16">
-          <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-              <TextBox Text="{Binding BrowsePath}" PlaceholderText="Path to browse on desktop backend" />
-              <Button Grid.Column="1" Command="{Binding BrowseWorkspaceCommand}" Content="Browse" MinWidth="84" />
-            </Grid>
-            <TextBlock Grid.Row="1" Text="{Binding WorkspaceStatus}" Foreground="#aab2c0" TextWrapping="Wrap" />
-            <ListBox Grid.Row="2" ItemsSource="{Binding WorkspaceEntries}" Background="Transparent" BorderThickness="0">
-              <ListBox.ItemTemplate>
-                <DataTemplate DataType="vm:WorkspaceEntryItem">
-                  <StackPanel Margin="0,4" Spacing="2">
-                    <TextBlock Text="{Binding Name}" Foreground="#f2f5f9" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding FullPath}" Foreground="#8c95a4" FontSize="12" TextWrapping="Wrap" />
-                  </StackPanel>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
-            <StackPanel Grid.Row="3" Spacing="8">
-              <TextBox Text="{Binding ProjectTitle}" PlaceholderText="Project title" />
-              <TextBox Text="{Binding ProjectWorkspacePath}" PlaceholderText="Workspace path" />
-              <Button Command="{Binding CreateProjectCommand}" Content="Add project" HorizontalAlignment="Stretch" />
-              <TextBox Text="{Binding CloneRemoteUrl}" PlaceholderText="Repository URL" />
-              <TextBox Text="{Binding CloneDestinationPath}" PlaceholderText="Clone destination path" />
-              <Button Command="{Binding CloneRepositoryCommand}" Content="Clone and add project" HorizontalAlignment="Stretch" />
-            </StackPanel>
-          </Grid>
-        </Border>
-      </TabItem>
-
-      <TabItem Header="Terminal" Foreground="#f2f5f9">
-        <Border Background="#101114" Padding="16">
-          <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
-              <TextBox Text="{Binding TerminalCwd}" PlaceholderText="Terminal cwd" />
-              <Button Grid.Column="1" Command="{Binding OpenTerminalCommand}" Content="Open" MinWidth="68" />
-              <Button Grid.Column="2" Command="{Binding ClearTerminalCommand}" Content="Clear" MinWidth="68" />
-              <Button Grid.Column="3" Command="{Binding RestartTerminalCommand}" Content="Restart" MinWidth="78" />
-              <Button Grid.Column="4" Command="{Binding CloseTerminalCommand}" Content="Close" MinWidth="68" />
-            </Grid>
-            <TextBlock Grid.Row="1" Text="{Binding TerminalStatus}" Foreground="#aab2c0" TextWrapping="Wrap" />
-            <Border Grid.Row="2" Background="#0d0f12" BorderBrush="#2a2f3a" BorderThickness="1">
-              <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding TerminalLines}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding}"
-                                 Foreground="#e5e7eb"
-                                 FontFamily="Consolas, Menlo, monospace"
-                                 FontSize="12"
-                                 TextWrapping="Wrap"
-                                 Margin="10,3" />
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </ScrollViewer>
-            </Border>
-            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-              <TextBox Text="{Binding TerminalInput}" PlaceholderText="Terminal input" MinHeight="44" />
-              <Button Grid.Column="1" Command="{Binding SendTerminalInputCommand}" Content="Send" MinWidth="76" />
-            </Grid>
-          </Grid>
-        </Border>
-      </TabItem>
-    </TabControl>
-
-    <Border Grid.Row="2" Background="#17191f" BorderBrush="#2a2f3a" BorderThickness="0,1,0,0" Padding="12,8">
-      <TextBlock Text="{Binding Status}" Foreground="#aab2c0" TextWrapping="Wrap" />
+    <Border Grid.Row="3"
+            Background="#151820"
+            BorderBrush="#252b36"
+            BorderThickness="0,1,0,0"
+            Padding="12,9">
+      <TextBlock Text="{Binding Status}"
+                 Foreground="#aab4c4"
+                 TextWrapping="Wrap"
+                 MaxLines="3" />
     </Border>
   </Grid>
 </UserControl>

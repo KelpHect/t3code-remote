@@ -2,8 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:T3Code.Native.App"
              x:Class="T3Code.Native.App.App"
-             RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             RequestedThemeVariant="Dark">
 
     <Application.DataTemplates>
         <local:ViewLocator/>
@@ -11,5 +10,35 @@
 
     <Application.Styles>
         <FluentTheme />
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="#1a1d23" />
+            <Setter Property="BorderBrush" Value="#303642" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="#f4f7fb" />
+            <Setter Property="CaretBrush" Value="#8fb6ff" />
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="#1a1d23" />
+            <Setter Property="BorderBrush" Value="#303642" />
+            <Setter Property="Foreground" Value="#f4f7fb" />
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="Background" Value="#20242d" />
+            <Setter Property="BorderBrush" Value="#303642" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="#f4f7fb" />
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style Selector="Button:disabled">
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
     </Application.Styles>
 </Application>
