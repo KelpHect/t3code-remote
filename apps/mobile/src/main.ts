@@ -34,6 +34,13 @@ import "@ionic/vue/css/palettes/dark.system.css";
 /* Theme variables */
 import "./theme/variables.css";
 
+const storedTheme = window.localStorage.getItem("t3-mobile-theme");
+if (storedTheme === "dark") {
+  document.body.classList.add("dark");
+} else if (storedTheme === "light") {
+  document.body.classList.add("light");
+}
+
 const app = createApp(App).use(IonicVue).use(router);
 
 router.isReady().then(() => {

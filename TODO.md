@@ -59,7 +59,11 @@ docs.
       safe-area-aware spacing, font, toolbar, content, item, modal, and composer
       variables; component overrides use Ionic CSS variables/shadow parts where
       possible instead of brittle DOM selectors.
-- [ ] Capture UI reference acceptance screenshots before backend work.
+- [x] Capture UI reference acceptance screenshots before backend work.
+      Evidence: normal phone-sized emulator screenshots are stored under
+      `apps/mobile/docs/screenshots/` for empty chat, populated chat, drawer
+      history, settings/connection, model/mode sheet, action sheet, and
+      terminal tool sheet.
       Acceptance: emulator screenshots for empty chat, populated chat, drawer
       history, settings/connection, model/mode sheet, and one tool sheet show no
       clipped text, overlapped controls, wide tabs, setup-first empty state, or

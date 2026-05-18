@@ -12,7 +12,7 @@
           <span class="chat-subtitle">t3code-remote</span>
         </ion-title>
         <ion-buttons slot="end">
-          <ion-button aria-label="New chat">
+          <ion-button aria-label="New chat" @click="setEmptyChat(true)">
             <ion-icon slot="icon-only" :icon="addOutline" />
           </ion-button>
           <ion-button aria-label="Open tools" @click="setToolsOpen(true)">
@@ -51,7 +51,15 @@
           </ion-button>
         </section>
 
-        <section class="message-list" aria-label="Messages">
+        <section v-if="emptyChat" class="empty-chat" aria-label="Empty chat">
+          <h1>T3 Code</h1>
+          <p>Start a project chat once a backend is paired.</p>
+          <ion-button fill="outline" shape="round" @click="setEmptyChat(false)">
+            View sample thread
+          </ion-button>
+        </section>
+
+        <section v-else class="message-list" aria-label="Messages">
           <article
             v-for="message in messages"
             :key="message.id"
@@ -139,12 +147,82 @@
         </ion-toolbar>
       </ion-header>
       <ion-content class="sheet-content">
-        <ion-list lines="full">
-          <ion-item v-for="entry in activeToolDetails.entries" :key="entry">
-            <ion-label>{{ entry }}</ion-label>
-          </ion-item>
-        </ion-list>
-        <p class="sheet-note">{{ activeToolDetails.note }}</p>
+        <section v-if="activeTool === 'diff'" class="tool-workspace">
+          <div class="tool-summary">
+            <ion-badge color="primary">3 files</ion-badge>
+            <span>Unified preview</span>
+          </div>
+          <pre
+            class="diff-preview"
+          ><code><span class="diff-file">apps/mobile/src/views/ChatPage.vue</span>
+<span class="diff-add">+ &lt;ion-modal&gt;Thread tools&lt;/ion-modal&gt;</span>
+<span class="diff-add">+ &lt;section class="terminal-preview"&gt;</span>
+<span class="diff-del">- Static placeholder until /ws compatibility</span>
+<span class="diff-context">  Composer remains pinned above navigation.</span></code></pre>
+        </section>
+
+        <section v-else-if="activeTool === 'git'" class="tool-workspace">
+          <div class="status-grid">
+            <div class="status-card">
+              <strong>Modified</strong>
+              <span>4</span>
+            </div>
+            <div class="status-card">
+              <strong>Branch</strong>
+              <span>main</span>
+            </div>
+          </div>
+          <ion-list lines="full">
+            <ion-item>
+              <ion-label>
+                <h2>Commit mobile UI polish</h2>
+                <p>Ready once validation passes.</p>
+              </ion-label>
+            </ion-item>
+            <ion-item>
+              <ion-label>
+                <h2>Push to origin/main</h2>
+                <p>Runs after each completed TODO task.</p>
+              </ion-label>
+            </ion-item>
+          </ion-list>
+        </section>
+
+        <section v-else-if="activeTool === 'files'" class="tool-workspace">
+          <div class="path-bar">/home/kellhect/Projects/t3code-remote/apps/mobile</div>
+          <ion-list lines="full">
+            <ion-item v-for="entry in fileEntries" :key="entry.path">
+              <ion-icon slot="start" :icon="entry.icon" />
+              <ion-label>
+                <h2>{{ entry.name }}</h2>
+                <p>{{ entry.path }}</p>
+              </ion-label>
+            </ion-item>
+          </ion-list>
+        </section>
+
+        <section v-else-if="activeTool === 'terminal'" class="tool-workspace">
+          <pre class="terminal-preview"><code>$ bun --cwd apps/mobile build
+✓ vue-tsc --noEmit
+✓ vite build
+$ capacitor sync android
+✓ copied web assets
+$ adb install -r app-debug.apk
+Success</code></pre>
+          <div class="terminal-input">
+            <span>$</span>
+            <p>Type command after backend terminal support is connected.</p>
+          </div>
+        </section>
+
+        <section v-else class="tool-workspace">
+          <ion-list lines="full">
+            <ion-item v-for="entry in activeToolDetails.entries" :key="entry">
+              <ion-label>{{ entry }}</ion-label>
+            </ion-item>
+          </ion-list>
+          <p class="sheet-note">{{ activeToolDetails.note }}</p>
+        </section>
       </ion-content>
     </ion-modal>
   </ion-page>
@@ -176,7 +254,9 @@ import {
   arrowUpOutline,
   chevronDownOutline,
   codeSlashOutline,
+  documentTextOutline,
   ellipsisHorizontalOutline,
+  folderOpenOutline,
   hardwareChipOutline,
   menuOutline,
   stopCircleOutline,
@@ -203,6 +283,24 @@ const messages = [
     avatar: "T3",
     author: "T3 Code",
     text: "Next steps are history navigation, settings, and contextual sheets before backend discovery starts.",
+  },
+] as const;
+
+const fileEntries = [
+  {
+    name: "src",
+    path: "views, router, theme",
+    icon: folderOpenOutline,
+  },
+  {
+    name: "ChatPage.vue",
+    path: "chat, composer, tool sheets",
+    icon: documentTextOutline,
+  },
+  {
+    name: "SettingsPage.vue",
+    path: "connection, pairing, dark mode",
+    icon: documentTextOutline,
   },
 ] as const;
 
@@ -244,6 +342,7 @@ const toolDetails: Record<ToolId, { title: string; entries: readonly string[]; n
 const modelModalOpen = ref(false);
 const toolsOpen = ref(false);
 const activeTool = ref<ToolId | null>(null);
+const emptyChat = ref(false);
 
 const activeToolDetails = computed(() => {
   if (!activeTool.value) {
@@ -263,6 +362,10 @@ const setModelModalOpen = (open: boolean) => {
 
 const setToolsOpen = (open: boolean) => {
   toolsOpen.value = open;
+};
+
+const setEmptyChat = (empty: boolean) => {
+  emptyChat.value = empty;
 };
 
 const openTool = (tool: ToolId) => {
@@ -344,6 +447,14 @@ const toolActionButtons = [
   padding-top: 1.25rem;
 }
 
+.thread-status > div {
+  min-width: 0;
+}
+
+.thread-status ion-badge {
+  flex-shrink: 0;
+}
+
 .thread-status h1,
 .thread-status p {
   margin: 0;
@@ -369,8 +480,8 @@ const toolActionButtons = [
 
 .thread-controls {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
-  overflow-x: auto;
   padding-bottom: 0.25rem;
 }
 
@@ -386,6 +497,32 @@ const toolActionButtons = [
   flex-direction: column;
   gap: 1.1rem;
   padding: 0.5rem 0 1rem;
+}
+
+.empty-chat {
+  display: grid;
+  flex: 1;
+  align-content: center;
+  justify-items: center;
+  gap: 0.75rem;
+  min-height: 20rem;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.empty-chat h1,
+.empty-chat p {
+  margin: 0;
+}
+
+.empty-chat h1 {
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.empty-chat p {
+  color: var(--ion-color-medium);
+  line-height: 1.45;
 }
 
 .message {
@@ -456,6 +593,104 @@ const toolActionButtons = [
   margin: 1rem;
   color: var(--ion-color-medium);
   line-height: 1.45;
+}
+
+.tool-workspace {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.tool-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--ion-color-medium);
+  font-size: 0.9rem;
+}
+
+.diff-preview,
+.terminal-preview {
+  overflow: auto;
+  margin: 0;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: var(--t3-panel-radius);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.diff-preview {
+  padding: 0.9rem;
+  background: var(--t3-panel-background);
+}
+
+.diff-preview code {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.diff-file {
+  color: var(--ion-color-primary);
+  font-weight: 700;
+}
+
+.diff-add {
+  color: var(--ion-color-success);
+}
+
+.diff-del {
+  color: var(--ion-color-danger);
+}
+
+.diff-context {
+  color: var(--ion-color-medium);
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.status-card {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: var(--t3-panel-radius);
+  background: var(--t3-panel-background);
+}
+
+.status-card span {
+  color: var(--ion-color-medium);
+}
+
+.path-bar,
+.terminal-input {
+  border: 1px solid var(--t3-panel-border);
+  border-radius: 0.8rem;
+  background: var(--t3-muted-surface);
+  color: var(--ion-color-medium);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  padding: 0.75rem;
+}
+
+.terminal-preview {
+  min-height: 16rem;
+  padding: 1rem;
+  background: var(--t3-terminal-background, #050607);
+  color: var(--t3-terminal-color, #d4f7d4);
+}
+
+.terminal-input {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.terminal-input p {
+  margin: 0;
 }
 
 .chat-footer {

@@ -1,4 +1,5 @@
-:root {
+:root,
+body.light {
   --ion-font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
@@ -65,6 +66,43 @@
   --t3-modal-radius: 1.25rem;
 }
 
+body.dark {
+  --ion-background-color: #0b0c0f;
+  --ion-background-color-rgb: 11, 12, 15;
+  --ion-text-color: #f4f4f5;
+  --ion-text-color-rgb: 244, 244, 245;
+  --ion-color-primary: #7dd3fc;
+  --ion-color-primary-rgb: 125, 211, 252;
+  --ion-color-primary-contrast: #082f49;
+  --ion-color-primary-contrast-rgb: 8, 47, 73;
+  --ion-color-primary-shade: #6ebade;
+  --ion-color-primary-tint: #8ad7fc;
+  --ion-color-step-50: #15171b;
+  --ion-color-step-100: #1c1f24;
+  --ion-color-step-150: #252931;
+  --ion-color-step-200: #2f343d;
+  --ion-color-step-300: #444a55;
+  --ion-color-step-400: #5b626d;
+  --ion-color-step-500: #767d88;
+  --ion-color-step-600: #989ea7;
+  --ion-color-step-700: #b7bcc3;
+  --ion-color-step-800: #d7d9de;
+  --ion-color-step-900: #eceef1;
+
+  --ion-item-background: #17191e;
+  --ion-toolbar-background: rgba(11, 12, 15, 0.94);
+  --ion-toolbar-color: var(--ion-text-color);
+  --ion-card-background: #17191e;
+
+  --t3-toolbar-border: rgba(244, 244, 245, 0.1);
+  --t3-panel-background: #17191e;
+  --t3-panel-border: rgba(244, 244, 245, 0.1);
+  --t3-composer-background: #20232b;
+  --t3-muted-surface: #20232b;
+  --t3-terminal-background: #050607;
+  --t3-terminal-color: #d4f7d4;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --ion-background-color: #0b0c0f;
@@ -99,6 +137,8 @@
     --t3-panel-border: rgba(244, 244, 245, 0.1);
     --t3-composer-background: #20232b;
     --t3-muted-surface: #20232b;
+    --t3-terminal-background: #050607;
+    --t3-terminal-color: #d4f7d4;
   }
 }
 

@@ -80,9 +80,14 @@
             <ion-icon slot="start" :icon="moonOutline" />
             <ion-label>
               <h2>Theme</h2>
-              <p>System</p>
+              <p>{{ darkMode ? "Dark" : "System light" }}</p>
             </ion-label>
-            <ion-toggle slot="end" aria-label="Use dark appearance" />
+            <ion-toggle
+              slot="end"
+              :checked="darkMode"
+              aria-label="Use dark appearance"
+              @ionChange="setDarkMode"
+            />
           </ion-item>
           <ion-item>
             <ion-icon slot="start" :icon="phonePortraitOutline" />
@@ -99,6 +104,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
 import {
   IonBadge,
   IonButton,
@@ -129,6 +135,15 @@ import {
   scanOutline,
   shieldCheckmarkOutline,
 } from "ionicons/icons";
+
+const darkMode = ref(document.body.classList.contains("dark"));
+
+const setDarkMode = (event: { detail: { checked: boolean } }) => {
+  darkMode.value = event.detail.checked;
+  document.body.classList.toggle("dark", darkMode.value);
+  document.body.classList.toggle("light", !darkMode.value);
+  window.localStorage.setItem("t3-mobile-theme", darkMode.value ? "dark" : "light");
+};
 </script>
 
 <style scoped>
