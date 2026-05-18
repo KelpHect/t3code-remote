@@ -54,7 +54,7 @@ docs.
       warning, diagnostics, theme, and app info use `IonList`, `IonItem`,
       `IonInput`, `IonTextarea`, `IonToggle`, `IonNote`, and `IonButton` with
       readable spacing and no clipped controls.
-- [ ] Theme through Ionic CSS variables and component parts.
+- [x] Theme through Ionic CSS variables and component parts.
       Acceptance: `src/theme/variables.css` defines light and dark palettes,
       safe-area-aware spacing, font, toolbar, content, item, modal, and composer
       variables; component overrides use Ionic CSS variables/shadow parts where

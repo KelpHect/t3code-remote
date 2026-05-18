@@ -143,7 +143,7 @@ import {
   max-width: 42rem;
   min-height: 100%;
   margin: 0 auto;
-  padding: calc(1rem + env(safe-area-inset-top)) 1rem 1.5rem;
+  padding: calc(var(--t3-page-padding) + var(--t3-safe-top)) var(--t3-page-padding) 1.5rem;
 }
 
 .settings-hero {
@@ -177,9 +177,9 @@ import {
 
 .settings-list {
   overflow: hidden;
-  border: 1px solid var(--ion-color-step-150, rgba(0, 0, 0, 0.08));
-  border-radius: 1rem;
-  background: var(--ion-item-background, var(--ion-background-color));
+  border: 1px solid var(--t3-panel-border);
+  border-radius: var(--t3-panel-radius);
+  background: var(--t3-panel-background);
 }
 
 .settings-list ion-item {

@@ -1,2 +1,157 @@
-/* For information on how to create your own theme, please refer to:
-http://ionicframework.com/docs/theming/ */
+:root {
+  --ion-font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --ion-color-primary: #2563eb;
+  --ion-color-primary-rgb: 37, 99, 235;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #2157cf;
+  --ion-color-primary-tint: #3b73ed;
+
+  --ion-color-success: #16a34a;
+  --ion-color-success-rgb: 22, 163, 74;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #138f41;
+  --ion-color-success-tint: #2dac5c;
+
+  --ion-color-warning: #d97706;
+  --ion-color-warning-rgb: 217, 119, 6;
+  --ion-color-warning-contrast: #111827;
+  --ion-color-warning-contrast-rgb: 17, 24, 39;
+  --ion-color-warning-shade: #bf6905;
+  --ion-color-warning-tint: #dd851f;
+
+  --ion-color-danger: #dc2626;
+  --ion-color-danger-rgb: 220, 38, 38;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #c22121;
+  --ion-color-danger-tint: #e03c3c;
+
+  --ion-background-color: #fbfaf8;
+  --ion-background-color-rgb: 251, 250, 248;
+  --ion-text-color: #18181b;
+  --ion-text-color-rgb: 24, 24, 27;
+  --ion-color-step-50: #f4f2ef;
+  --ion-color-step-100: #ece9e5;
+  --ion-color-step-150: #e1ddd7;
+  --ion-color-step-200: #d6d1ca;
+  --ion-color-step-300: #bbb5ad;
+  --ion-color-step-400: #9f9890;
+  --ion-color-step-500: #827b74;
+  --ion-color-step-600: #665f59;
+  --ion-color-step-700: #4b4641;
+  --ion-color-step-800: #302d2a;
+  --ion-color-step-900: #1f1d1b;
+
+  --ion-item-background: #ffffff;
+  --ion-toolbar-background: rgba(251, 250, 248, 0.94);
+  --ion-toolbar-color: var(--ion-text-color);
+  --ion-tab-bar-background: var(--ion-background-color);
+  --ion-card-background: #ffffff;
+
+  --t3-page-padding: 1rem;
+  --t3-page-max-width: 42rem;
+  --t3-safe-top: env(safe-area-inset-top);
+  --t3-safe-bottom: env(safe-area-inset-bottom);
+  --t3-toolbar-border: rgba(24, 24, 27, 0.08);
+  --t3-panel-background: #ffffff;
+  --t3-panel-border: rgba(24, 24, 27, 0.1);
+  --t3-panel-radius: 1rem;
+  --t3-composer-background: #eceff8;
+  --t3-muted-surface: #f0efec;
+  --t3-modal-radius: 1.25rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ion-background-color: #0b0c0f;
+    --ion-background-color-rgb: 11, 12, 15;
+    --ion-text-color: #f4f4f5;
+    --ion-text-color-rgb: 244, 244, 245;
+    --ion-color-primary: #7dd3fc;
+    --ion-color-primary-rgb: 125, 211, 252;
+    --ion-color-primary-contrast: #082f49;
+    --ion-color-primary-contrast-rgb: 8, 47, 73;
+    --ion-color-primary-shade: #6ebade;
+    --ion-color-primary-tint: #8ad7fc;
+    --ion-color-step-50: #15171b;
+    --ion-color-step-100: #1c1f24;
+    --ion-color-step-150: #252931;
+    --ion-color-step-200: #2f343d;
+    --ion-color-step-300: #444a55;
+    --ion-color-step-400: #5b626d;
+    --ion-color-step-500: #767d88;
+    --ion-color-step-600: #989ea7;
+    --ion-color-step-700: #b7bcc3;
+    --ion-color-step-800: #d7d9de;
+    --ion-color-step-900: #eceef1;
+
+    --ion-item-background: #17191e;
+    --ion-toolbar-background: rgba(11, 12, 15, 0.94);
+    --ion-toolbar-color: var(--ion-text-color);
+    --ion-card-background: #17191e;
+
+    --t3-toolbar-border: rgba(244, 244, 245, 0.1);
+    --t3-panel-background: #17191e;
+    --t3-panel-border: rgba(244, 244, 245, 0.1);
+    --t3-composer-background: #20232b;
+    --t3-muted-surface: #20232b;
+  }
+}
+
+html,
+body,
+#app {
+  background: var(--ion-background-color);
+}
+
+ion-header ion-toolbar,
+ion-footer ion-toolbar {
+  --border-color: var(--t3-toolbar-border);
+  --min-height: 3.5rem;
+}
+
+ion-content {
+  --background: var(--ion-background-color);
+  --padding-bottom: var(--t3-safe-bottom);
+}
+
+ion-menu {
+  --background: var(--ion-background-color);
+  --width: min(21.5rem, 88vw);
+}
+
+ion-menu ion-content {
+  --background: var(--ion-background-color);
+}
+
+ion-item {
+  --background: var(--ion-item-background);
+  --color: var(--ion-text-color);
+  --detail-icon-color: var(--ion-color-medium);
+}
+
+ion-list {
+  background: transparent;
+}
+
+ion-modal::part(content) {
+  border-radius: var(--t3-modal-radius) var(--t3-modal-radius) 0 0;
+  background: var(--ion-background-color);
+}
+
+ion-action-sheet::part(content) {
+  background: var(--t3-panel-background);
+}
+
+ion-textarea.composer-input {
+  --background: var(--t3-composer-background);
+  --border-radius: 1.35rem;
+  --padding-bottom: 0.6rem;
+  --padding-end: 0.95rem;
+  --padding-start: 0.95rem;
+  --padding-top: 0.6rem;
+}

@@ -71,7 +71,13 @@
     <ion-footer class="chat-footer">
       <ion-toolbar>
         <div class="composer-shell">
-          <ion-textarea aria-label="Message" auto-grow placeholder="Message" :rows="1" />
+          <ion-textarea
+            aria-label="Message"
+            auto-grow
+            class="composer-input"
+            placeholder="Message"
+            :rows="1"
+          />
           <ion-button shape="round" aria-label="Send message">
             <ion-icon slot="icon-only" :icon="arrowUpOutline" />
           </ion-button>
@@ -327,7 +333,7 @@ const toolActionButtons = [
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  padding: 1rem 1rem 1.5rem;
+  padding: var(--t3-page-padding) var(--t3-page-padding) 1.5rem;
 }
 
 .thread-status {
@@ -422,7 +428,7 @@ const toolActionButtons = [
 .message-user .message-body {
   padding: 0.75rem 0.9rem;
   border-radius: 1.1rem;
-  background: var(--ion-color-light);
+  background: var(--t3-muted-surface);
 }
 
 .message-author,
@@ -465,12 +471,6 @@ const toolActionButtons = [
 }
 
 .composer-shell ion-textarea {
-  --background: var(--ion-color-light);
-  --border-radius: 1.25rem;
-  --padding-bottom: 0.55rem;
-  --padding-end: 0.9rem;
-  --padding-start: 0.9rem;
-  --padding-top: 0.55rem;
   min-height: 2.75rem;
 }
 
