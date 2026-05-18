@@ -30,42 +30,41 @@ Implementation target:
 
 ## Current Scaffold State
 
-`apps/mobile/` exists as a stock Ionic Vue Vite tabs starter.
+`apps/mobile/` exists as a normalized Ionic Vue Vite app named
+`@t3tools/mobile`.
 
 Present:
 
-- `package.json`
+- `package.json` with `dev`, `build`, `preview`, `lint`, `typecheck`, `test`,
+  `test:watch`, `test:e2e`, and `cap:sync:android` scripts
 - `index.html`
 - `src/App.vue`
 - `src/main.ts`
 - `src/router/index.ts`
 - starter tab views under `src/views/`
+- `src/theme/variables.css`
 - `vite.config.ts`
 - `tsconfig.json`
 - `ionic.config.json`
-- Vitest example test under `tests/unit/`
+- `capacitor.config.ts`
+- Capacitor Android project under `apps/mobile/android/`
+- mobile README
+- Vitest baseline test
 - Cypress config and e2e folder
 
-Not present yet:
+Still to replace:
 
-- Capacitor config
-- `android/` platform project
-- mobile README
-- `typecheck` script
-- `test` script alias
-- `cap:sync:android` script
+- Generated tabs UI
 - T3 Code chat/history/projects/settings/tools screens
-- backend discovery, pairing, or `/ws` compatibility code
+- Backend discovery, pairing, or `/ws` compatibility code
 
-Current scaffold check failures:
+Current scaffold checks:
 
-- `bun --cwd apps/mobile lint` fails because ESLint cannot resolve
-  `@typescript-eslint/eslint-plugin`.
-- `bun --cwd apps/mobile test:unit --run` fails in the starter
-  `tests/unit/example.spec.ts` while importing `Tab1Page.vue`.
-- `bun --cwd apps/mobile build` gets through `vue-tsc` but Vite build fails
-  because the starter legacy plugin emits `output.format: system`, which the
-  repo's Vite/Rolldown stack does not implement.
+- `bun --cwd apps/mobile lint` passes.
+- `bun --cwd apps/mobile typecheck` passes.
+- `bun --cwd apps/mobile test` passes.
+- `bun --cwd apps/mobile build` passes.
+- `bun --cwd apps/mobile cap:sync:android` passes.
 
 ## Non-Negotiable Backend Boundary
 

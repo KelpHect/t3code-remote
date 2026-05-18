@@ -8,14 +8,12 @@ Inspected root project instructions and plans (`AGENTS.md`, `TODO.md`,
 `plan_mobile.md`, `REMOTE.md`, `README.md`), root workspace scripts
 (`package.json`, `turbo.json`, `bun.lock`), current app directories under
 `apps/`, Android SDK/emulator availability, and the active mobile direction.
-The active implementation target is `apps/mobile/`. The scaffold currently is
-the stock Ionic Vue tabs starter with local `node_modules`, Vite, Vitest,
-Cypress, ESLint, and no Capacitor Android project yet. Scaffold checks currently
-fail: lint cannot resolve `@typescript-eslint/eslint-plugin`, the starter unit
-test fails while importing `Tab1Page.vue`, and build fails because the starter
-legacy plugin emits unsupported `output.format: system` under this repo's
-Vite/Rolldown stack. Existing backend, web, desktop, and shared package code
-remain out of scope for mobile support.
+The active implementation target is `apps/mobile/`. The scaffold is normalized
+as `@t3tools/mobile`, includes Capacitor Android under `apps/mobile/android/`,
+and has clean mobile lint, typecheck, test, build, and Android sync baselines.
+It still uses the generated Ionic tabs starter UI and has no T3 Code mobile
+chat shell yet. Existing backend, web, desktop, and shared package code remain
+out of scope for mobile support.
 
 ## P0 - Ionic Vue UI Bring-Up
 
@@ -111,7 +109,7 @@ docs.
       Acceptance: root `bun install` recognizes the workspace; root
       `bun typecheck`, `bun lint`, and `bun run test` still target existing
       packages successfully; mobile scripts can run independently.
-- [ ] Add `apps/mobile/README.md`.
+- [x] Add `apps/mobile/README.md`.
       Acceptance: README documents setup, Android emulator run commands, backend
       boundary, private-network requirement, and validation commands.
 
