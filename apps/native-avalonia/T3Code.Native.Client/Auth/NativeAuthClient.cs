@@ -6,21 +6,6 @@ namespace T3Code.Native.Client.Auth;
 
 public sealed class NativeAuthClient(HttpClient httpClient)
 {
-    public async Task<NativeDescriptor> GetDescriptorAsync(
-        Uri baseUri,
-        CancellationToken cancellationToken = default
-    )
-    {
-        using var request = new HttpRequestMessage(HttpMethod.Get, Combine(baseUri, "/api/native/descriptor"));
-        using var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
-
-        return await response.Content
-            .ReadFromJsonAsync<NativeDescriptor>(NativeProtocol.JsonOptions, cancellationToken)
-            .ConfigureAwait(false)
-            ?? throw new NativeProtocolException("empty_descriptor", "Server returned an empty descriptor.", true);
-    }
-
     public async Task<AuthBearerBootstrapResult> ExchangePairingTokenAsync(
         Uri baseUri,
         string pairingToken,
@@ -61,9 +46,9 @@ public sealed class NativeAuthClient(HttpClient httpClient)
             ?? throw new NativeProtocolException("empty_ws_token", "Server returned an empty WebSocket token.", true);
     }
 
-    public static Uri BuildNativeWebSocketUri(Uri baseUri, string wsToken)
+    public static Uri BuildExistingWebSocketUri(Uri baseUri, string wsToken)
     {
-        var builder = new UriBuilder(Combine(baseUri, "/native/ws"))
+        var builder = new UriBuilder(Combine(baseUri, "/ws"))
         {
             Scheme = baseUri.Scheme == Uri.UriSchemeHttps ? "wss" : "ws",
             Query = $"wsToken={Uri.EscapeDataString(wsToken)}",

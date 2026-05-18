@@ -39,7 +39,7 @@ Installed locally:
 Missing or not configured:
 
 - Pairing against a real desktop backend is not validated yet.
-- Native network discovery for reachable T3 backends is not implemented yet; manual URL entry is currently required.
+- Native network discovery for reachable T3 backends is implemented through `GET /api/auth/session` probes; manual URL entry remains available.
 - Non-interactive shells that do not source zsh/bash rc files may still see stale Android/Java paths; source the rc file before build checks.
 
 Official setup references:

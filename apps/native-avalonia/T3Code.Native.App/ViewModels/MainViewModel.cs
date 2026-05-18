@@ -1,17 +1,19 @@
 ﻿using System.Collections.ObjectModel;
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using T3Code.Native.Client.Auth;
+using T3Code.Native.Client.Discovery;
 
 namespace T3Code.Native.App.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {
     [ObservableProperty]
-    private string _baseUrl = "http://127.0.0.1:3773";
+    private string _baseUrl = "";
 
     [ObservableProperty]
     private string _pairingToken = "";
@@ -23,10 +25,18 @@ public partial class MainViewModel : ViewModelBase
     private string _serverName = "Not connected";
 
     [ObservableProperty]
-    private string _protocol = "Native protocol pending";
+    private string _protocol = "Existing backend /ws compatibility";
 
     [ObservableProperty]
     private bool _isPaired;
+
+    [ObservableProperty]
+    private bool _isScanning;
+
+    [ObservableProperty]
+    private DiscoveredBackendItem? _selectedBackend;
+
+    public ObservableCollection<DiscoveredBackendItem> DiscoveredBackends { get; } = [];
 
     public ObservableCollection<ProjectShellItem> Projects { get; } =
     [
@@ -77,7 +87,49 @@ public partial class MainViewModel : ViewModelBase
     private string _composerText = "";
 
     private readonly NativeAuthClient _authClient = new(new HttpClient());
+    private readonly T3BackendDiscoveryClient _discoveryClient = new(new HttpClient());
     private readonly ISecretStore _secretStore = new MemorySecretStore();
+
+    [RelayCommand]
+    private async Task ScanBackendsAsync()
+    {
+        if (IsScanning)
+        {
+            return;
+        }
+
+        try
+        {
+            IsScanning = true;
+            Status = "Scanning private network for T3 backends...";
+            var discovered = await _discoveryClient.DiscoverAsync();
+            DiscoveredBackends.Clear();
+
+            foreach (var backend in discovered)
+            {
+                DiscoveredBackends.Add(
+                    new DiscoveredBackendItem(
+                        backend.BaseUri.ToString().TrimEnd('/'),
+                        backend.Source,
+                        backend.Authenticated ? "Already authenticated" : "Pairing required"
+                    )
+                );
+            }
+
+            SelectedBackend = DiscoveredBackends.FirstOrDefault();
+            Status = DiscoveredBackends.Count == 0
+                ? "No T3 backend found. Enter a VPN/LAN URL manually."
+                : $"Found {DiscoveredBackends.Count} T3 backend candidate(s).";
+        }
+        catch (Exception error)
+        {
+            Status = error.Message;
+        }
+        finally
+        {
+            IsScanning = false;
+        }
+    }
 
     [RelayCommand]
     private async Task PairAsync()
@@ -103,22 +155,10 @@ public partial class MainViewModel : ViewModelBase
             var wsToken = await _authClient.IssueWebSocketTokenAsync(baseUri, auth.BearerToken);
             IsPaired = true;
             ServerName = baseUri.Authority;
-            Protocol = NativeAuthClient.BuildNativeWebSocketUri(baseUri, wsToken.WsToken).ToString();
-            Status = "Paired. Waiting for /native/ws support in the desktop backend.";
-
-            try
-            {
-                var descriptor = await _authClient.GetDescriptorAsync(baseUri);
-                ServerName = descriptor.ServerName;
-                Protocol = $"v{descriptor.ProtocolVersion} ({descriptor.AuthMode})";
-                Status = descriptor.CleartextHttp
-                    ? "Paired over cleartext HTTP. Use only through VPN/private LAN."
-                    : "Paired.";
-            }
-            catch
-            {
-                // Current backend builds may not expose the future native descriptor yet.
-            }
+            Protocol = NativeAuthClient.BuildExistingWebSocketUri(baseUri, wsToken.WsToken).ToString();
+            Status = baseUri.Scheme == Uri.UriSchemeHttp
+                ? "Paired over cleartext HTTP. Use only through VPN/private LAN."
+                : "Paired.";
         }
         catch (Exception error)
         {
@@ -157,7 +197,17 @@ public partial class MainViewModel : ViewModelBase
 
         return trimmed;
     }
+
+    partial void OnSelectedBackendChanged(DiscoveredBackendItem? value)
+    {
+        if (value is not null)
+        {
+            BaseUrl = value.BaseUrl;
+        }
+    }
 }
+
+public sealed record DiscoveredBackendItem(string BaseUrl, string Source, string Status);
 
 public sealed record ProjectShellItem(string Title, string Detail);
 

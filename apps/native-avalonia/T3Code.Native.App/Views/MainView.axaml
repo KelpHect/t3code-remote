@@ -15,15 +15,31 @@
   <Grid RowDefinitions="Auto,*,Auto" Background="#101114">
     <Border Grid.Row="0" Background="#17191f" BorderBrush="#2a2f3a" BorderThickness="0,0,0,1" Padding="16,12">
       <StackPanel Spacing="8">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-          <TextBox Grid.Column="0"
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+          <Button Grid.Column="0"
+                  Command="{Binding ScanBackendsCommand}"
+                  Content="Scan"
+                  MinWidth="76" />
+          <TextBox Grid.Column="1"
                    Text="{Binding BaseUrl}"
-                   PlaceholderText="http://vpn-or-lan-ip:3773" />
-          <Button Grid.Column="1"
+                   PlaceholderText="Discover or enter http://vpn-or-lan-ip:3773" />
+          <Button Grid.Column="2"
                   Command="{Binding PairCommand}"
                   Content="Pair"
                   MinWidth="76" />
         </Grid>
+        <ComboBox ItemsSource="{Binding DiscoveredBackends}"
+                  SelectedItem="{Binding SelectedBackend}"
+                  HorizontalAlignment="Stretch">
+          <ComboBox.ItemTemplate>
+            <DataTemplate DataType="vm:DiscoveredBackendItem">
+              <StackPanel Spacing="2">
+                <TextBlock Text="{Binding BaseUrl}" Foreground="#f2f5f9" />
+                <TextBlock Text="{Binding Source}" Foreground="#8c95a4" FontSize="12" />
+              </StackPanel>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
         <TextBox Text="{Binding PairingToken}"
                  PlaceholderText="Pairing token or URL" />
         <StackPanel Spacing="2">
