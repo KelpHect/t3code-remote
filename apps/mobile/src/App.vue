@@ -11,7 +11,12 @@
         </ion-toolbar>
       </ion-header>
       <ion-content class="menu-content">
-        <ion-searchbar aria-label="Search chats" class="menu-search" placeholder="Search" />
+        <ion-searchbar
+          aria-label="Search chats"
+          class="menu-search"
+          placeholder="Search"
+          search-icon="searchOutline"
+        />
 
         <ion-list class="menu-actions" lines="none">
           <ion-item button :detail="false" class="action-row">
@@ -40,13 +45,18 @@
           </ion-item>
         </ion-list>
 
-        <ion-list v-for="project in projects" :key="project.id" class="project-list" lines="none">
-          <div class="project-heading">
+        <ion-list
+          v-for="project in projects"
+          :key="project.id"
+          class="project-list"
+          lines="none"
+        >
+          <ion-item-divider class="project-heading">
             <ion-icon :icon="chevronDownOutline" />
             <ion-icon :icon="folderOutline" />
-            <span>{{ project.name }}</span>
+            <ion-label>{{ project.name }}</ion-label>
             <span class="thread-count">{{ project.threads.length }}</span>
-          </div>
+          </ion-item-divider>
           <ion-item
             v-for="thread in project.threads"
             :key="thread.id"
@@ -76,10 +86,12 @@
 import { onMounted, onUnmounted } from "vue";
 import {
   IonApp,
+  IonBadge,
   IonContent,
   IonHeader,
   IonIcon,
   IonItem,
+  IonItemDivider,
   IonLabel,
   IonList,
   IonMenu,
@@ -297,12 +309,12 @@ const projects = [
 }
 
 .project-heading {
+  --background: transparent;
+  --color: #9ca3af;
+  --padding-start: 0.05rem;
   display: flex;
-  align-items: center;
-  gap: 0.35rem;
   min-height: 1.65rem;
-  padding: 0.15rem 0.25rem 0.15rem 0.05rem;
-  color: #9ca3af;
+  gap: 0.35rem;
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -315,11 +327,8 @@ const projects = [
   color: #71717a;
 }
 
-.project-heading span:not(.thread-count) {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.project-heading ion-label {
+  margin: 0;
 }
 
 .thread-count {
