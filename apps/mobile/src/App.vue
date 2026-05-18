@@ -81,11 +81,26 @@ import {
 import { addOutline, chatbubbleOutline, settingsOutline, wifiOutline } from "ionicons/icons";
 
 import { useConnectionState } from "@/client/connectionState";
+import { defaultSecretStore, loadAuthSession } from "@/client/secretStore";
 
-const { selectedBackend, startDiscoveryLoop, statusDetail, statusText, stopDiscoveryLoop } =
-  useConnectionState();
+const {
+  selectedBackend,
+  setAuthSession,
+  startDiscoveryLoop,
+  statusDetail,
+  statusText,
+  stopDiscoveryLoop,
+} = useConnectionState();
 
 onMounted(() => {
+  void loadAuthSession(defaultSecretStore).then((session) => {
+    if (!session) return;
+    setAuthSession({
+      backendUrl: session.backendUrl,
+      bearerSession: session.bearerSession,
+      webSocketToken: session.webSocketToken,
+    });
+  });
   startDiscoveryLoop();
 });
 

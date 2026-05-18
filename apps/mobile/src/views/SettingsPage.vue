@@ -183,6 +183,7 @@ import {
 
 import { bootstrapBearerSession, issueWebSocketToken } from "@/client/auth";
 import { useConnectionState } from "@/client/connectionState";
+import { clearAuthSession, defaultSecretStore, saveAuthSession } from "@/client/secretStore";
 
 const {
   candidateCount,
@@ -191,9 +192,9 @@ const {
   probeResults,
   scanBackends,
   selectedBackend,
-  setBearerSession,
+  clearAuthState,
+  setAuthSession,
   setManualUrl,
-  setWebSocketToken,
   statusDetail,
   statusText,
 } = useConnectionState();
@@ -238,14 +239,23 @@ const pairBackend = async () => {
       backendUrl,
       sessionToken: session.sessionToken,
     });
-    setBearerSession(session);
-    setWebSocketToken(webSocketToken);
+    await saveAuthSession(defaultSecretStore, {
+      backendUrl,
+      bearerSession: session,
+      webSocketToken,
+      storedAt: new Date().toISOString(),
+    });
+    setAuthSession({
+      backendUrl,
+      bearerSession: session,
+      webSocketToken,
+    });
     pairingInput.value = "";
     pairingState.value = "paired";
     pairingMessage.value = "Bearer session and WebSocket token are ready.";
   } catch (error) {
-    setBearerSession(null);
-    setWebSocketToken(null);
+    clearAuthState();
+    await clearAuthSession(defaultSecretStore);
     pairingState.value = "failed";
     pairingMessage.value = error instanceof Error ? error.message : "Pairing failed.";
   }

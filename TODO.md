@@ -178,7 +178,12 @@ endpoints or change existing auth behavior.
       flow surfaces auth denial while clearing in-memory auth state.
       Acceptance: request sends bearer authorization, decodes the existing
       `token` response field, and surfaces auth denial clearly.
-- [ ] Store bearer tokens behind a mobile secure-storage adapter.
+- [x] Store bearer tokens behind a mobile secure-storage adapter.
+      Evidence: `apps/mobile/src/client/secretStore.ts` persists auth sessions
+      through a `SecretStore` abstraction, Android registers the app-owned
+      `T3SecureStorage` Capacitor plugin backed by Android Keystore encryption
+      plus private `SharedPreferences`, settings saves/clears auth sessions
+      through the adapter, and tests use memory storage without localStorage.
       Acceptance: production Android uses a Capacitor secure storage path;
       tests can use in-memory storage; plaintext localStorage is not used for
       production tokens.

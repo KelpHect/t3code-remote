@@ -14,6 +14,7 @@ const manualUrl = ref("");
 const candidates = ref<readonly BackendCandidate[]>([]);
 const probeResults = ref<readonly SessionProbeResult[]>([]);
 const selectedBackend = ref<SessionProbeResult | null>(null);
+const pairedBackendUrl = ref<string | null>(null);
 const bearerSession = ref<BearerSession | null>(null);
 const webSocketToken = ref<WebSocketToken | null>(null);
 const discoveryState = ref<DiscoveryState>("idle");
@@ -43,11 +44,11 @@ const statusText = computed(() => {
   return "Not connected";
 });
 const statusDetail = computed(() => {
-  if (bearerSession.value && webSocketToken.value && selectedBackend.value) {
-    return `Realtime token ready for ${selectedBackend.value.candidate.url}`;
+  if (bearerSession.value && webSocketToken.value) {
+    return `Realtime token ready for ${pairedBackendUrl.value ?? selectedBackend.value?.candidate.url ?? "paired backend"}`;
   }
-  if (bearerSession.value && selectedBackend.value) {
-    return `Paired with ${selectedBackend.value.candidate.url}`;
+  if (bearerSession.value) {
+    return `Paired with ${pairedBackendUrl.value ?? selectedBackend.value?.candidate.url ?? "backend"}`;
   }
   if (selectedBackend.value) {
     const prefix =
@@ -150,11 +151,30 @@ function setManualUrl(value: string) {
 
 function setBearerSession(session: BearerSession | null) {
   bearerSession.value = session;
-  if (!session) webSocketToken.value = null;
+  if (!session) {
+    pairedBackendUrl.value = null;
+    webSocketToken.value = null;
+  }
 }
 
 function setWebSocketToken(token: WebSocketToken | null) {
   webSocketToken.value = token;
+}
+
+function setAuthSession(input: {
+  readonly backendUrl: string;
+  readonly bearerSession: BearerSession;
+  readonly webSocketToken: WebSocketToken;
+}) {
+  pairedBackendUrl.value = input.backendUrl;
+  bearerSession.value = input.bearerSession;
+  webSocketToken.value = input.webSocketToken;
+}
+
+function clearAuthState() {
+  pairedBackendUrl.value = null;
+  bearerSession.value = null;
+  webSocketToken.value = null;
 }
 
 export function useConnectionState() {
@@ -162,14 +182,17 @@ export function useConnectionState() {
     bearerSession,
     candidateCount,
     candidates,
+    clearAuthState,
     discoveryState,
     lastError,
     lastScanFinishedAt,
     lastScanStartedAt,
     manualUrl,
+    pairedBackendUrl,
     probeResults,
     scanBackends,
     selectedBackend,
+    setAuthSession,
     setBearerSession,
     setManualUrl,
     setWebSocketToken,
