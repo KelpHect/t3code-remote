@@ -21,6 +21,12 @@ The existing backend already exposes bearer pairing at `/api/auth/bootstrap/bear
 
 Do not add or depend on `/api/native/descriptor`, `/native/ws`, new RPCs, backend forks, or separately installed adapter processes in the existing T3 codebase for native support. If the existing backend protocol is awkward, handle that in the native compatibility layer or in a bundled app-owned compatibility runtime under `apps/native-avalonia/`.
 
+## Native Desktop Scope
+
+The Avalonia desktop target is scoped as a native client for the existing backend. It uses the same discovery, pairing, bearer/ws-token auth, existing `/ws` compatibility transport, app-owned DTOs, reconnect logic, and optional app-owned compatibility runtime as Android.
+
+It must not launch a modified backend, require a fork, change Electron packaging, or add backend/web/shared package behavior for native support. Later native desktop work can improve the Avalonia UI and local process ergonomics only inside this app boundary.
+
 ## Commands
 
 ```sh

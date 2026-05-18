@@ -150,8 +150,8 @@ Purpose: define how native artifacts ship without changing existing Electron/ser
 
 - [x] Define native Android artifact path and signing strategy.
       Evidence: `apps/native-avalonia/docs/android-release.md` defines package metadata, debug APK path, release APK/AAB commands, signing environment variables, version-code rules, artifact retention, and signing safety rules. `apps/native-avalonia/README.md` links to it, and `plan_mobile.md` summarizes the debug/release paths and signing inputs.
-- [ ] Keep native desktop scoped as a client for the existing backend.
-      Acceptance: plan states how the native desktop client connects, pairs, and reuses the same compatibility client/runtime as mobile without changing existing backend/web/desktop code.
+- [x] Keep native desktop scoped as a client for the existing backend.
+      Evidence: `plan_mobile.md` and `apps/native-avalonia/README.md` now state that Avalonia desktop discovers or manually targets the existing backend, pairs through `/api/auth/bootstrap/bearer`, refreshes `/api/auth/ws-token`, reuses `T3Code.Native.Client` existing-`/ws` compatibility with Android, and keeps all native desktop work under `apps/native-avalonia/` without changing server/web/desktop/shared code or Electron release scripts.
 - [x] Keep Avalonia release automation separate from existing Electron scripts.
       Evidence: native Avalonia projects are under `apps/native-avalonia/`; no existing `dist:desktop:*` behavior was changed to package Avalonia output.
 

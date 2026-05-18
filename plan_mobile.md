@@ -141,6 +141,12 @@ The native Android artifact and signing rules live in `apps/native-avalonia/docs
 - Release package format: use `-p:AndroidPackageFormat=apk` for sideload APKs and `-p:AndroidPackageFormat=aab` for store upload bundles.
 - Artifact retention: generated APK/AAB files stay out of source control and are copied from the native release output directory into the release system when a native release pipeline exists.
 
+## Native Desktop Scope
+
+Avalonia desktop is a peer native client for the existing unmodified T3 backend. It connects to a discovered or manually entered backend URL, pairs through `/api/auth/bootstrap/bearer`, refreshes `/api/auth/ws-token`, and reuses the same `T3Code.Native.Client` existing-`/ws` compatibility layer as Android.
+
+Native desktop work stays under `apps/native-avalonia/`. It may share app-owned DTOs, persistence abstractions, reconnect/outbox logic, and an app-owned compatibility runtime if needed. It must not modify `apps/server`, `apps/web`, `apps/desktop`, `packages/contracts`, `packages/shared`, or the existing Electron release scripts to support native.
+
 ## Stack Decision
 
 Primary: Avalonia 12 / .NET 10.
