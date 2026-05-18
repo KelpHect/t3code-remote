@@ -116,9 +116,11 @@
                 </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
-            <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
             <TextBox Text="{Binding ComposerText}" PlaceholderText="Send a turn" MinHeight="44" AcceptsReturn="True" />
-              <Button Grid.Column="1" Command="{Binding QueueComposerCommand}" Content="Send" MinWidth="76" />
+              <Button Grid.Column="1" Command="{Binding ContinueThreadCommand}" Content="Continue" MinWidth="88" />
+              <Button Grid.Column="2" Command="{Binding StopThreadCommand}" Content="Stop" MinWidth="64" />
+              <Button Grid.Column="3" Command="{Binding QueueComposerCommand}" Content="Send" MinWidth="76" />
           </Grid>
         </Grid>
       </Border>

@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Avalonia.Threading;
 using T3Code.Native.Client.Auth;
+using T3Code.Native.Client.Commands;
 using T3Code.Native.Client.Discovery;
 using T3Code.Native.Client.Shell;
 using T3Code.Native.Client.Thread;
@@ -72,9 +73,9 @@ public partial class MainViewModel : ViewModelBase
 
     public ObservableCollection<string> RuntimeModes { get; } =
     [
-        "default",
-        "plan",
-        "auto",
+        "full-access",
+        "approval-required",
+        "auto-accept-edits",
     ];
 
     [ObservableProperty]
@@ -83,8 +84,7 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<string> InteractionModes { get; } =
     [
         "default",
-        "review",
-        "unattended",
+        "plan",
     ];
 
     [ObservableProperty]
@@ -96,6 +96,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly NativeAuthClient _authClient = new(new HttpClient());
     private readonly T3BackendDiscoveryClient _discoveryClient = new(new HttpClient());
     private readonly ISecretStore _secretStore = NativeAppServices.SecretStore;
+    private readonly NativeCommandOutbox _commandOutbox = new(new MemoryNativeCommandOutboxStore());
     private ExistingWsRpcSession? _shellSession;
     private IAsyncDisposable? _shellSubscription;
     private IAsyncDisposable? _threadSubscription;
@@ -178,7 +179,7 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void QueueComposer()
+    private async Task QueueComposer()
     {
         if (string.IsNullOrWhiteSpace(ComposerText))
         {
@@ -186,8 +187,54 @@ public partial class MainViewModel : ViewModelBase
         }
 
         ChatLines.Add(new("you", ComposerText.Trim()));
+        var text = ComposerText.Trim();
         ComposerText = "";
-        Status = "Queued locally until orchestration.dispatchCommand is wired through existing /ws.";
+        await DispatchThreadCommandAsync(client =>
+            client.SendTurnAsync(
+                SelectedThread!.Id,
+                text,
+                BuildSelectedModelSelection(),
+                SelectedRuntimeMode,
+                SelectedInteractionMode
+            )
+        );
+    }
+
+    [RelayCommand]
+    private async Task ContinueThreadAsync() =>
+        await DispatchThreadCommandAsync(client =>
+            client.ContinueAsync(
+                SelectedThread!.Id,
+                BuildSelectedModelSelection(),
+                SelectedRuntimeMode,
+                SelectedInteractionMode
+            )
+        );
+
+    [RelayCommand]
+    private async Task StopThreadAsync() =>
+        await DispatchThreadCommandAsync(client => client.InterruptTurnAsync(SelectedThread!.Id));
+
+    private async Task DispatchThreadCommandAsync(
+        Func<NativeThreadCommandClient, Task<string>> dispatch
+    )
+    {
+        if (_shellSession is null || SelectedThread is null)
+        {
+            Status = "Select a synced thread first.";
+            return;
+        }
+
+        try
+        {
+            var client = new NativeThreadCommandClient(_shellSession, _commandOutbox);
+            var commandId = await dispatch(client);
+            Status = $"Command queued: {commandId}";
+        }
+        catch (Exception error)
+        {
+            Status = error.Message;
+        }
     }
 
     private async Task LoadThreadAsync(ThreadShellItem thread)
@@ -393,6 +440,13 @@ public partial class MainViewModel : ViewModelBase
 
         return trimmed;
     }
+
+    private object BuildSelectedModelSelection() =>
+        new
+        {
+            instanceId = "codex",
+            model = SelectedModel,
+        };
 
     partial void OnSelectedBackendChanged(DiscoveredBackendItem? value)
     {
