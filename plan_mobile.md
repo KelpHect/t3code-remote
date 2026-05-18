@@ -236,6 +236,12 @@ The native compatibility implementation starts in
 `T3Code.Native.Client/Transport/ExistingWsRpcSession.cs`. This is the only layer
 that should know the current Effect RPC frame names.
 
+Decision as of 2026-05-18: direct native transport is enough for the next
+implementation slice. The captured shell/thread subscription attempts and C#
+transport tests cover the required frame types. Do not add a bundled helper
+runtime unless later methods require serialization behavior that cannot be kept
+small and isolated in C#.
+
 ## Native App Shape
 
 Current projects:
