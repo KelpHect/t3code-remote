@@ -1,170 +1,272 @@
-# T3 Code Production Readiness TODO
+# T3 Code Mobile Production Readiness TODO
 
 Last audit refresh: 2026-05-18
 
 ## Audit Scope
 
-Inspected root instructions and roadmap state (`AGENTS.md`, `TODO.md`, `REMOTE.md`, `README.md`), root package scripts (`package.json`, `turbo.json`, `bun.lock` presence), native app docs/code/tests/config (`apps/native-avalonia/**` excluding build `obj` output), Android SDK availability under `/home/kellhect/Android/Sdk`, .NET SDK/workload state, and the latest validation commands from this workspace. Current implementation scope is the native app plus synchronized docs only; existing backend/web/desktop/shared package code is out of scope for native support. App-owned compatibility runtimes or helper services are in scope when they live under `apps/native-avalonia/` and ship inside our app.
+Inspected root project instructions and plans (`AGENTS.md`, `TODO.md`,
+`plan_mobile.md`, `REMOTE.md`, `README.md`), root workspace scripts
+(`package.json`, `turbo.json`, `bun.lock`), current app directories under
+`apps/`, Android SDK/emulator availability, and the active mobile direction.
+The active implementation target is `apps/mobile/`. The scaffold currently is
+the stock Ionic Vue tabs starter with local `node_modules`, Vite, Vitest,
+Cypress, ESLint, and no Capacitor Android project yet. Scaffold checks currently
+fail: lint cannot resolve `@typescript-eslint/eslint-plugin`, the starter unit
+test fails while importing `Tab1Page.vue`, and build fails because the starter
+legacy plugin emits unsupported `output.format: system` under this repo's
+Vite/Rolldown stack. Existing backend, web, desktop, and shared package code
+remain out of scope for mobile support.
 
-## P0 - Native Mobile Bring-Up Blockers
+## P0 - Ionic Vue App Bring-Up
 
-Purpose: make the Avalonia Android spike buildable and runnable on an emulator while preserving compatibility with the existing T3 backend. Risk: high, because no real mobile decision gate is valid until the app runs on Android. Scope guardrail: only `apps/native-avalonia/`, docs, local setup notes, and generated mobile artifacts needed for Android build/run.
+Purpose: normalize the new Ionic Vue scaffold and make it runnable on Android
+emulator with a clean chat-first shell. Risk: high because no mobile work is
+valid until the app has the right scripts, Capacitor target, and mobile UX
+baseline. Scope guardrail: only `apps/mobile/`, root workspace wiring needed for
+that app, and synchronized docs.
 
-### Environment
+### App Scaffold
 
-- [x] Create the native Avalonia app scaffold. Evidence: `apps/native-avalonia/T3Code.Native.App.slnx` contains Android, iOS, browser, desktop, app, client, and tests projects.
-- [x] Detect Android SDK install location. Evidence: `adb` and `emulator` exist under `/home/kellhect/Android/Sdk/platform-tools` and `/home/kellhect/Android/Sdk/emulator`.
-- [x] Add repeatable local Android environment setup documentation.
-      Evidence: `plan_mobile.md` and `apps/native-avalonia/README.md` show `ANDROID_HOME=/home/kellhect/Android/Sdk`, PATH exports, `adb devices`, `emulator -list-avds`, and build/run commands.
-- [x] Install the .NET Android workload.
-      Evidence: `dotnet workload list` shows `android` version `36.1.53/10.0.100`.
-- [x] Create at least one Android AVD or expose one from Android Studio.
-      Evidence: `/home/kellhect/Android/Sdk/emulator/emulator -list-avds` prints `MyAndroidAVD`, and `/home/kellhect/Android/Sdk/platform-tools/adb devices` shows `emulator-5554 device`.
-- [x] Put Android SDK CLI tools on the shell `PATH`.
-      Evidence: after `source ~/.zshrc` or `source ~/.bashrc`, `command -v adb` resolves to `/home/kellhect/Android/Sdk/platform-tools/adb`, `command -v emulator` resolves to `/home/kellhect/Android/Sdk/emulator/emulator`, `adb devices` shows `emulator-5554 device`, and `emulator -list-avds` prints `MyAndroidAVD`.
-- [x] Make the Android SDK platform layout compatible with .NET Android.
-      Evidence: `/home/kellhect/Android/Sdk/platforms/android-36/android.jar` exists, and Android build now gets past API platform resolution.
-- [x] Configure a valid Java SDK for command-line Android builds.
-      Evidence: after `source ~/.zshrc` or `source ~/.bashrc`, `java` and `jar` resolve under `/usr/lib/jvm/java-17-temurin-jdk`, and plain Android `dotnet build` passes without `JavaSdkDirectory`.
-- [x] Fix invalid Android package id generated from the template.
-      Evidence: `ApplicationId` is now `codes.t3.nativeapp` instead of a package path containing Java keyword `native`.
+- [x] Delete the old native mobile implementation directory.
+      Evidence: the previous native mobile app directory no longer exists in
+      the worktree.
+- [x] Scaffold the Ionic Vue app at `apps/mobile/`.
+      Evidence: `apps/mobile/package.json`, `index.html`, `src/`,
+      `vite.config.ts`, `tsconfig.json`, `ionic.config.json`, and starter
+      `Tab1Page`/`Tab2Page`/`Tab3Page` views exist.
+- [ ] Normalize the scaffold for this monorepo.
+      Acceptance: package name is project-scoped, starter description is
+      replaced, generated `node_modules` is removed from the worktree, and
+      scripts include `dev`, `build`, `preview`, `lint`, `typecheck`, `test`,
+      `test:e2e`, and `cap:sync:android`.
+- [ ] Fix the scaffold lint baseline.
+      Evidence: `bun --cwd apps/mobile lint` currently fails because ESLint
+      cannot resolve `@typescript-eslint/eslint-plugin`.
+      Acceptance: required ESLint dependencies/config are present and
+      `bun --cwd apps/mobile lint` passes without new warnings in mobile files.
+- [ ] Fix the scaffold unit-test baseline.
+      Evidence: `bun --cwd apps/mobile test:unit --run` currently fails in
+      `tests/unit/example.spec.ts` while importing the starter `Tab1Page.vue`.
+      Acceptance: the mobile test command is `bun --cwd apps/mobile test`, uses
+      the app's Vitest config, and passes against the current starter or
+      replacement shell.
+- [ ] Fix the scaffold build baseline.
+      Evidence: `bun --cwd apps/mobile build` currently passes `vue-tsc` but
+      Vite build fails because the starter legacy plugin emits unsupported
+      `output.format: system`.
+      Acceptance: Vite config is compatible with the repo toolchain and
+      `bun --cwd apps/mobile build` passes.
+- [ ] Add Capacitor Android to `apps/mobile/`.
+      Acceptance: Capacitor config exists, Android platform is generated under
+      `apps/mobile/android/`, package id/display name are explicit, and
+      `bun --cwd apps/mobile cap:sync:android` succeeds.
+- [ ] Wire `apps/mobile/` into the Bun workspace without changing
+      existing web/server/desktop behavior.
+      Acceptance: root `bun install` recognizes the workspace; root
+      `bun typecheck`, `bun lint`, and `bun run test` still target existing
+      packages successfully; mobile scripts can run independently.
+- [ ] Add `apps/mobile/README.md`.
+      Acceptance: README documents setup, Android emulator run commands, backend
+      boundary, private-network requirement, and validation commands.
 
-### Mobile Run Gate
+### First Mobile UI
 
-- [x] Build and launch the Android native app on emulator.
-      Evidence: `dotnet publish apps/native-avalonia/T3Code.Native.App.Android/T3Code.Native.App.Android.csproj -c Debug` produced `codes.t3.nativeapp-Signed.apk`; `adb install -r .../publish/codes.t3.nativeapp-Signed.apk` succeeded; `adb shell am start -n codes.t3.nativeapp/crc6420cdeeba6ca0b5da.MainActivity` launched and focused the app; screenshot captured at `apps/native-avalonia/artifacts/android-emulator-pairing-screen.png`.
-- [x] Build the Android native app from a clean project state.
-      Evidence: `dotnet clean ...Android.csproj` followed by an Android build passed with explicit SDK/JDK properties; after shell rc refresh, plain `dotnet build apps/native-avalonia/T3Code.Native.App.Android/T3Code.Native.App.Android.csproj` also passes from both zsh and bash.
-- [x] Discover existing T3 backends on the reachable private network instead of relying on a hardcoded URL.
-      Evidence: `T3BackendDiscoveryClient` probes `GET /api/auth/session` on loopback, Android emulator host, interface, gateway, and private subnet candidates; `MainView` exposes a scan action and discovered backend picker while retaining manual URL entry. `T3BackendDiscoveryTests` covers discovery and `/ws` URI generation.
-- [x] Pair with the existing desktop backend using only existing auth endpoints.
-      Evidence: native client implements `/api/auth/bootstrap/bearer` and `/api/auth/ws-token` using the existing backend's `sessionToken` and `token` response fields; `NativeAuthClientTests` covers request bodies, bearer authorization, and response decoding. Live validation created a one-time pairing credential through existing `t3 auth pairing create`, exchanged it with the currently running desktop backend at `http://127.0.0.1:3773`, and issued a short-lived ws token without printing secrets. Existing T3 code changes are not part of the plan.
-      Acceptance: a discovered or manually entered VPN/LAN backend can exchange a pairing token, receive a bearer session token and ws token, and show the paired state using only native app code.
+- [ ] Build a ChatGPT-like mobile shell with static fixture data before protocol
+      work.
+      Acceptance: default screen is a chat view with clean header, message list,
+      fixed bottom composer, model/mode affordance, and menu/history entry;
+      connection setup is not the primary empty screen.
+- [ ] Add history/search screen grouped by recency and project.
+      Acceptance: thread rows show title, project context, last activity text,
+      and group headers such as Today, Yesterday, Previous 7 days, and Previous
+      30 days.
+- [ ] Add projects screen matching T3 Code's desktop mental model.
+      Acceptance: projects are grouped with active/working state and thread
+      counts; selecting a project filters or opens its thread history.
+- [ ] Add settings/connection screen.
+      Acceptance: screen contains backend discovery, manual URL entry, pairing
+      token/URL input, private-network warning, and discovery diagnostics.
+- [ ] Capture emulator screenshots for chat, history, projects, and connection.
+      Acceptance: screenshots show no clipped text, overlapping controls, wide
+      desktop tab bars, dense button grids, or setup-first UI.
 
-## P1 - Existing Backend WebSocket Compatibility
+## P1 - Backend Discovery And Pairing
 
-Purpose: unblock real chat/project/git/terminal behavior against an unmodified original T3 backend. Risk: high, because the app must consume or translate the current backend `/ws` protocol without letting private wire-format assumptions leak across the native codebase. Scope guardrail: do not change `apps/server`, `apps/web`, `apps/desktop`, `packages/contracts`, or `packages/shared`; implement compatibility inside `apps/native-avalonia/`, including bundled app-owned helper runtimes when needed.
+Purpose: make the Ionic app find and pair with an unmodified running T3 desktop
+backend. Risk: high because beta testing depends on finding the user's local
+backend reliably. Scope guardrail: mobile app code only; do not add backend
+endpoints or change existing auth behavior.
+
+### Discovery
+
+- [ ] Implement backend candidate generation.
+      Acceptance: Android emulator probes `http://10.0.2.2:3773` first;
+      desktop/browser dev probes `http://127.0.0.1:3773` and
+      `http://localhost:3773`; LAN/VPN probing is supported where platform APIs
+      allow; manual URL entry is always available.
+- [ ] Implement `GET /api/auth/session` probe.
+      Acceptance: any candidate returning T3 auth JSON is treated as a valid
+      backend even when `authenticated` is false; failed probes are classified
+      into timeout, connection refused, invalid response, blocked cleartext, or
+      unknown error.
+- [ ] Surface discovery diagnostics in the UI.
+      Acceptance: connection screen shows candidate count, selected backend,
+      probe status, and emulator guidance when no backend is found.
+- [ ] Add discovery tests.
+      Acceptance: tests cover emulator host priority, duplicate candidate
+      removal, successful unauthenticated backend detection, timeout handling,
+      and invalid-response rejection.
+
+### Pairing
+
+- [ ] Implement bearer pairing through `POST /api/auth/bootstrap/bearer`.
+      Acceptance: request accepts pairing token or URL, extracts token from URL
+      fragments, decodes the existing `sessionToken` response field, and never
+      logs credentials.
+- [ ] Implement short-lived ws-token issue through `POST /api/auth/ws-token`.
+      Acceptance: request sends bearer authorization, decodes the existing
+      `token` response field, and surfaces auth denial clearly.
+- [ ] Store bearer tokens behind a mobile secure-storage adapter.
+      Acceptance: production Android uses a Capacitor secure storage path;
+      tests can use in-memory storage; plaintext localStorage is not used for
+      production tokens.
+
+## P2 - Existing `/ws` Compatibility
+
+Purpose: consume the current backend WebSocket protocol from the Ionic app while
+keeping private wire details isolated. Risk: high because the backend protocol is
+not a public native API. Scope guardrail: app-owned TypeScript compatibility
+code and tests only.
 
 ### Protocol
 
-- [x] Choose the production-compatible backend path.
-      Evidence: `plan_mobile.md` documents that the active path is compatibility with the original backend from our app, with no T3 fork, existing backend endpoint, or shared package change required. Bundled app-owned compatibility runtimes are allowed.
-- [x] Capture current backend `/ws` handshake and RPC frames as compatibility fixtures.
-      Evidence: `apps/native-avalonia/T3Code.Native.Tests/Fixtures/ExistingWs/effect-rpc-json-v1.json` records redacted Effect RPC JSON frames for auth bootstrap, ws-token issue, `/ws` connection, request/response calls, subscription chunks, ack, interrupt/cancel, and error exits. Coverage includes shell subscription, thread subscription, dispatch command, turn/full-thread diffs, filesystem browse, source-control lookup/clone, VCS refresh, git action error, and terminal event/open/close frames. `jq empty` validates the fixture JSON.
-      Acceptance: fixture files contain redacted request/response/subscription/cancel/error examples for shell subscription, thread subscription, dispatch command, diffs, git, filesystem, and terminal calls; fixtures contain no pairing tokens, bearer tokens, ws tokens, local secrets, or private paths beyond synthetic test paths.
-- [x] Implement an isolated existing-`/ws` compatibility transport in `T3Code.Native.Client`.
-      Evidence: `ExistingWsRpcSession` owns the current Effect RPC JSON frame handling for `Request`, `Exit`, `Chunk`, `Ack`, `Interrupt`, and `Ping`/`Pong`; it uses `ClientWebSocket` through the existing socket abstraction, supports request/response calls, subscriptions, cancellation, reconnect replay, and protocol exceptions. `ExistingWsRpcSessionTests` covers success exits, chunks, ack, interrupt, failures, and heartbeat pong. UI/view models do not reference Effect RPC frames.
-      Acceptance: native code can connect to an unmodified backend `/ws` using `/api/auth/ws-token`, perform request/response calls, start subscriptions, receive events, cancel streams, and surface protocol errors through app-owned interfaces; no UI/view model references the private wire format directly.
-- [x] Decide whether direct transport is enough or an app-owned compatibility runtime is needed.
-      Evidence: fixture capture and native transport tests show the current backend uses a small Effect RPC JSON frame set that C# can consume directly: `Request`, `Exit`, `Chunk`, `Ack`, `Interrupt`, and `Ping`/`Pong`. `ExistingWsRpcSession` successfully models request/response, shell-style subscription chunks, thread subscription errors, cancellation, heartbeat, and failures without a helper runtime. Decision: continue with direct native transport for P1/P3 shell and thread work; add a bundled app-owned runtime only if fixture drift or later methods expose unsupported Effect serialization behavior.
-      Acceptance: document the decision with evidence from fixture capture and first shell/thread subscription attempts; if a runtime is needed, it lives under `apps/native-avalonia/`, ships with the app, requires no separate install, and talks only to the original T3 backend.
-- [x] Replace placeholder shell data with existing-backend `orchestration.subscribeShell`.
-      Evidence: `NativeShellClient` maps shell stream items into app-owned project/thread DTOs, and `MainViewModel` starts an `ExistingWsRpcSession` after pairing, subscribes to `orchestration.subscribeShell`, and replaces placeholder project/thread lists from snapshots and incremental events. `NativeShellClientTests` covers snapshot/removal mapping. A live C# validation against the running desktop backend received a real shell snapshot through the native transport (`projects=6`, `threads=5`) without backend changes.
-      Acceptance: Android emulator or phone pairs to a discovered or manually entered local desktop backend, subscribes to shell state over `/ws`, and renders real projects/threads using only native app code.
-- [x] Add drift tests for the compatibility transport.
-      Evidence: `ExistingWsFixtureDriftTests` copies the redacted `/ws` fixtures into test output, checks required method coverage and secret redaction, replays unary success frames through `ExistingWsRpcSession`, replays shell subscription chunks through `NativeShellClient`, and replays failure exits through `ExistingWsRpcException`. Failures name the impacted fixture frame.
-      Acceptance: tests replay captured fixtures and fail narrowly when original-backend wire shapes change; failures identify the impacted method or envelope.
-- [x] Map existing backend data into app-owned native DTOs.
-      Evidence: `NativeShellMapper` converts existing-backend shell snapshots and events from `JsonElement` into app-owned `NativeShellSnapshot`, `NativeProjectShell`, `NativeThreadShell`, and `NativeShellUpdate` records inside `T3Code.Native.Client.Shell`. `MainViewModel` consumes those DTOs and converts them to Avalonia UI records; it does not parse Effect RPC `Request`/`Exit`/`Chunk` frames or backend JSON payloads directly. `NativeShellClientTests` and `ExistingWsFixtureDriftTests` cover DTO mapping from fixture/current-wire shapes.
-      Acceptance: UI/view models consume app-owned DTOs only; no view model, persistence type, or screen references the existing backend wire format or helper-runtime protocol directly.
+- [ ] Capture redacted current `/ws` fixtures from an unmodified local backend.
+      Acceptance: fixtures cover auth, request/response, shell subscription,
+      thread subscription, command dispatch, diffs, filesystem, git, terminal,
+      cancellation, and errors; no tokens or private paths are present.
+- [ ] Implement TypeScript existing-`/ws` transport.
+      Acceptance: transport connects with issued ws-token, sends request frames,
+      resolves responses, streams subscription events, acks chunks if required,
+      handles heartbeat, and cancels streams.
+- [ ] Add drift fixture tests.
+      Acceptance: tests replay captured frames and fail with method/envelope
+      names when current backend shapes change.
+- [ ] Keep private wire parsing out of Vue components and stores.
+      Acceptance: UI consumes app-owned DTOs only; lint or tests guard against
+      importing transport internals into views.
 
-## P2 - Native Client Reliability
+## P3 - Mobile Client Reliability
 
-Purpose: make the reusable native client robust enough for mobile sleep/VPN transitions and command retries. Risk: high for user trust, moderate for implementation blast radius. Scope guardrail: client library and tests first; UI should consume stable client state instead of owning transport details.
+Purpose: make the app usable over emulator host networking, LAN, and VPN where
+sleep/background events are normal. Risk: high for trust. Scope guardrail:
+client/state modules first; UI consumes state rather than owning transport.
 
-### Transport And State
+### State
 
-- [x] Add reconnect replay and subscription cancellation tests. Evidence: `NativeRpcSessionTests.cs` covers replay after reconnect and non-replay after cancellation.
-- [x] Add sequence-ordering helper tests. Evidence: `SequenceGateTests.cs` covers increasing sequence behavior.
-- [x] Add command outbox persistence abstraction.
-      Evidence: `NativeCommandOutbox` persists retryable command records through `INativeCommandOutboxStore`; `JsonFileNativeCommandOutboxStore` proves restart survival without platform coupling, and `MemoryNativeCommandOutboxStore` keeps tests/spikes lightweight. `NativeCommandOutboxTests` covers enqueue, restart load, replay attempt increment, completion removal, and command-id upsert semantics.
-- [x] Add ws-token refresh/reconnect flow.
-      Evidence: `RefreshingExistingWsRpcSession` issues short-lived `/ws` URLs through `IExistingWsUriProvider`, retries authentication failures once with a fresh token, reconnects through `ExistingWsRpcSession.ReconnectAsync(Uri, ...)`, and lets the existing replay filter resend only active operations. `BearerTokenExistingWsUriProvider` renews ws-tokens from the stored bearer token. `RefreshingExistingWsRpcSessionTests` covers expired-token reconnect, active request replay, canceled subscription non-replay, and final auth denial through `ExistingWsAuthenticationException`.
-- [x] Add bounded backoff and network-state reporting.
-      Evidence: `NativeReconnectLoop` wraps a reconnectable session with `NativeConnectionState` updates for connecting, connected, disconnected, reconnecting, waiting-to-retry, offline, and cancelled states. `BoundedExponentialBackoff` caps retry delays. `NativeReconnectLoopTests` covers transient disconnect/reconnect, repeated failures with capped delay and offline reporting, and cancellation without retry.
-- [x] Replace in-memory production token storage with platform secure storage.
-      Evidence: `NativeAppServices.SecretStore` defaults to `MemorySecretStore` for desktop/tests, while the Android host installs `AndroidSecretStore` during app-builder setup. `AndroidSecretStore` encrypts bearer tokens with an Android KeyStore AES-GCM key and stores only ciphertext/IV in private shared preferences. `NativeAuthClientTests` covers save/load/clear semantics for the shared `ISecretStore` contract, and Android build validation covers the platform adapter.
+- [ ] Implement reconnect loop with bounded backoff and visible connection
+      states.
+      Acceptance: states include connecting, connected, reconnecting, offline,
+      auth required, and failed; delays are capped and testable.
+- [ ] Implement command outbox with client-generated command IDs.
+      Acceptance: send/continue/stop commands persist before dispatch, replay
+      after reconnect, and are removed only after success or explicit cancel.
+- [ ] Implement sequence filtering for shell/thread events.
+      Acceptance: stale or duplicate events do not regress project/thread/chat
+      state.
+- [ ] Keep composer drafts local per device.
+      Acceptance: drafts survive screen navigation and app backgrounding but do
+      not sync to the backend.
 
-## P3 - Native UX Parity For Core Workflows
+## P4 - Core T3 Workflows
 
-Purpose: turn the scaffold into a useful mobile client once protocol access exists. Risk: medium-high because long chats/diffs/terminals can become slow or unusable. Scope guardrail: implement core remote workflows before polish.
+Purpose: reach real beta usefulness against the existing backend. Risk: medium
+to high because these surfaces touch user files, git, terminals, and agent
+sessions. Scope guardrail: implement mobile UX and app-owned clients; do not
+change backend behavior.
 
 ### Chat And Shell
 
-- [x] Replace placeholder project/thread lists with `orchestration.subscribeShell`.
-      Evidence: completed during P1 in `NativeShellClient` and `MainViewModel`: after pairing, the app opens the existing backend `/ws`, subscribes to `orchestration.subscribeShell`, maps snapshots/events into app-owned DTOs, and replaces placeholder projects/threads. `NativeShellClientTests` covers snapshot/removal mapping, and live validation against the desktop backend received real project/thread counts. Remaining ordering/sequence hardening is handled by the native `SequenceGate` and later UI-specific refinements, not placeholder data.
-- [x] Implement thread subscription and chat rendering.
-      Evidence: `NativeThreadClient` subscribes to `orchestration.subscribeThread` over the existing backend `/ws`, maps thread snapshots/events into app-owned thread DTOs, and `NativeThreadState` applies only increasing sequences while deduplicating entries by id. `MainViewModel` subscribes when a thread is selected and renders messages/activities in the Chat tab; approval and user-input-style activities use a distinct action tone. `MainView.axaml` uses a virtualized `ListBox` for chat entries instead of an unbounded `ItemsControl` inside a `ScrollViewer`. `NativeThreadClientTests` covers snapshot mapping, action activity rendering, stale event rejection, and duplicate message replacement.
-- [x] Implement send/continue/stop commands with client-generated command IDs.
-      Evidence: `NativeThreadCommandClient` dispatches `thread.turn.start`, continue-as-turn-start, `thread.turn.interrupt`, and `thread.session.stop` through `orchestration.dispatchCommand` with client-generated command IDs. It persists each command through `NativeCommandOutbox` before sending and removes it only after success, so failed dispatches retain the same command ID for retry and backend dedupe. `MainViewModel` wires Send, Continue, and Stop actions to the command client. `NativeThreadCommandClientTests` covers command id correlation, payload shape, outbox completion, and failed-dispatch retry retention.
-- [x] Wire model, runtime mode, and interaction mode controls to backend contracts.
-      Evidence: `NativeServerConfigClient` loads `server.getConfig` through the existing `/ws` transport and maps enabled/installed provider model snapshots into `NativeModelOption` values. `MainViewModel` replaces placeholder model strings with backend model options after pairing and preserves the selected provider/model when the option still exists. Runtime and interaction controls now use contract values (`full-access`, `approval-required`, `auto-accept-edits`, `default`, `plan`) and dispatch those values in turn-start commands. `NativeServerConfigClientTests` covers provider/model mapping and unavailable-provider filtering.
+- [ ] Subscribe to `orchestration.subscribeShell` and render real projects and
+      threads.
+      Acceptance: after pairing, projects/history replace fixture data and stay
+      synchronized with desktop.
+- [ ] Subscribe to `orchestration.subscribeThread` and render real chat turns,
+      actions, approvals, and user-input prompts.
+      Acceptance: selecting a thread opens current messages and live updates;
+      long lists remain smooth.
+- [ ] Implement send, continue, stop, and new thread/project chat flows.
+      Acceptance: commands use client-generated command IDs and sync with
+      desktop state.
+- [ ] Wire model, runtime mode, and interaction mode controls.
+      Acceptance: options come from backend-supported config where available and
+      dispatch with chat commands.
 
-### Work Surfaces
+### Tools
 
-- [x] Add unified diff viewer.
-      Evidence: `NativeDiffClient` calls existing backend `orchestration.getTurnDiff` and `orchestration.getFullThreadDiff`, maps unified patch results into `NativeDiffResult`, and classifies ready/empty/binary states. `MainView.axaml` adds a Diff tab with turn-range inputs, turn/full-load buttons, explicit status text, and a read-only monospace text box with horizontal/vertical scrolling for large patches. `NativeDiffClientTests` covers request payloads, patch mapping, and empty/binary state classification.
-- [x] Add git status and action progress UI.
-      Evidence: `NativeGitClient` uses existing `vcs.refreshStatus` and streaming `git.runStackedAction` RPCs; it maps git status summaries and progress events into app-owned DTOs. `MainView.axaml` adds a Git tab with project-scoped status refresh, commit message input, Commit, Push, Commit+Push, and PR prep actions, plus a scrollable progress log. `NativeGitClientTests` covers status request/mapping and streamed action progress. Native UX uses the existing caller-scoped `git.runStackedAction` stream and does not require backend changes.
-- [x] Add filesystem browse and clone/project creation.
-      Evidence: `NativeWorkspaceClient` calls existing `filesystem.browse`, `sourceControl.cloneRepository`, and `orchestration.dispatchCommand` for `project.create`, with command-outbox retention until project creation succeeds. `MainView.axaml` adds a Files tab with desktop path browse, virtualized entry list for large directories, add-project fields, and clone-and-add-project flow. Permission and clone failures surface as status text without backend changes. `NativeWorkspaceClientTests` covers browse request/mapping, clone result mapping, project-create payload, and outbox completion.
-- [x] Add terminal scrollback and input.
-      Evidence: `NativeTerminalClient` wraps existing `terminal.open`, `terminal.write`, `terminal.resize`, `terminal.clear`, `terminal.restart`, `terminal.close`, and `subscribeTerminalEvents` RPCs. `MainView.axaml` adds a Terminal tab with cwd, open/clear/restart/close controls, bounded scrollback, and input send. `MainViewModel` filters terminal events to the selected thread, applies clear/restart/status events, and caps scrollback at 1000 lines. `NativeTerminalClientTests` covers open/write request shapes and output event subscription mapping.
+- [ ] Add unified diff viewer.
+      Acceptance: loads turn/full-thread diffs, handles empty/binary states, and
+      renders large patches without freezing.
+- [ ] Add git status and action progress.
+      Acceptance: refresh, commit, push, commit+push, and PR prep stream progress
+      with clear high-impact action affordances.
+- [ ] Add filesystem browse, project creation, and clone repository.
+      Acceptance: browse desktop paths, create project records, clone repos, and
+      report permission/clone failures without backend changes.
+- [ ] Add terminal scrollback and input.
+      Acceptance: open/write/resize/clear/restart/close work for selected
+      thread/project; output is bounded or virtualized.
 
-## P4 - Mobile Platform Hardening
+## P5 - Mobile Platform Hardening
 
-Purpose: make Android and later iOS safe and shippable. Risk: medium, with security and release implications. Scope guardrail: Android first; iOS remains deferred until Android decision gate passes.
+Purpose: make Android safe enough for real device beta and prepare iOS later.
+Risk: medium with security/release implications. Scope guardrail: Android first;
+iOS remains deferred.
 
 ### Android
 
-- [x] Allow cleartext for the Android spike. Evidence: Android manifest has `android:usesCleartextTraffic="true"` and internet permission.
-- [x] Restrict cleartext behavior to paired private hosts before production release.
-      Evidence: `NativeEndpointSecurity` allows HTTPS plus explicit loopback, emulator, LAN, link-local, CGNAT, and IPv6 local/private hosts while blocking public cleartext URLs before pairing token exchange; `MainViewModel` applies the check before auth bootstrap and keeps the VPN/private-network framing in status text. `NativeEndpointSecurityTests` covers allowed private hosts, blocked public hosts, and unsupported schemes.
-- [x] Replace placeholder Android icon/signing/versioning before release.
-      Evidence: `T3Code.Native.App.Android.csproj` now declares app id `codes.t3.nativeapp`, display name `T3 Code`, version name/code `0.1.0`/`100`, release signing properties driven by `T3_ANDROID_KEYSTORE*` environment variables, and lowercase Android icon resource naming. `Icon.png` was replaced with a 512px T3 Code icon, and `apps/native-avalonia/README.md` documents debug/release artifact paths plus APK/AAB package format switches.
-- [x] Add Android emulator screenshot/build gate.
-      Evidence: `apps/native-avalonia/README.md` documents publish/install/launch/screenshot commands, and `apps/native-avalonia/artifacts/android-emulator-pairing-screen.png` records the Android pairing shell.
+- [ ] Configure Capacitor Android package metadata.
+      Acceptance: package id, display name, version name/code, app icon, and
+      splash behavior are explicit.
+- [ ] Restrict cleartext HTTP to paired private hosts.
+      Acceptance: public cleartext URLs are blocked; emulator, loopback, LAN,
+      VPN, and HTTPS paths behave predictably.
+- [ ] Add Android permissions/network config needed for LAN/VPN discovery.
+      Acceptance: manifest/config includes only required permissions, with
+      user-visible rationale where Android requires it.
+- [ ] Define debug/release Android artifact paths and signing strategy.
+      Acceptance: README documents APK/AAB commands, signing env vars, artifact
+      output paths, and what stays out of git.
 
 ### iOS
 
-- [x] Add local-network/ATS plist entries for the iOS scaffold. Evidence: `Info.plist` contains `NSAllowsLocalNetworking` and local network usage text.
-- [x] Defer iOS build until Android proves the architecture.
-      Evidence: `plan_mobile.md` now has an iOS deferral gate that requires Android discovery/pairing, stable `/ws` subscriptions, reconnect after sleep/background/VPN interruption, long chat/diff/git/terminal rendering, and the full validation set before iOS work starts. It also names the macOS, Xcode, .NET iOS workload, Apple signing identity, app id/bundle id, provisioning profile, and device/simulator prerequisites.
+- [ ] Defer iOS until Android passes beta gate.
+      Acceptance: iOS checklist names macOS/Xcode/signing prerequisites but no
+      iOS implementation is started before Android proof.
 
-## P5 - Native Validation Baseline
+## P6 - Validation And Release Baseline
 
-Purpose: keep the native app work validated against the existing repository without turning this ledger into a backlog for the existing web/desktop/server product. Risk: medium because root checks still protect compatibility. Scope guardrail: validation may run existing checks, but implementation tasks stay in `apps/native-avalonia/` and docs.
+Purpose: keep the new app verifiable without destabilizing the existing product.
+Risk: medium because root checks still protect the monorepo. Scope guardrail:
+validation may run existing checks; implementation stays mobile-only.
 
-### Baseline Checks
+### Checks
 
-- [x] Root format, lint, typecheck, and tests passed after native scaffold.
-      Evidence: `bun fmt`, `bun lint`, `bun typecheck`, and `TURBO_ENV_MODE=loose LANG=C LC_ALL=C LANGUAGE=C bun run test` passed on 2026-05-18.
-- [x] Preserve C-locale guidance for root tests without changing existing scripts.
-      Evidence: `AGENTS.md` documents `TURBO_ENV_MODE=loose LANG=C LC_ALL=C LANGUAGE=C bun run test`; no existing test scripts were changed for native support.
-
-## P6 - Release And Operations
-
-Purpose: define how native artifacts ship without changing existing Electron/server/web release flows. Risk: medium until native release is in scope. Scope guardrail: do not wire release automation into existing app scripts before Android runtime proof.
-
-### Packaging
-
-- [x] Define native Android artifact path and signing strategy.
-      Evidence: `apps/native-avalonia/docs/android-release.md` defines package metadata, debug APK path, release APK/AAB commands, signing environment variables, version-code rules, artifact retention, and signing safety rules. `apps/native-avalonia/README.md` links to it, and `plan_mobile.md` summarizes the debug/release paths and signing inputs.
-- [x] Keep native desktop scoped as a client for the existing backend.
-      Evidence: `plan_mobile.md` and `apps/native-avalonia/README.md` now state that Avalonia desktop discovers or manually targets the existing backend, pairs through `/api/auth/bootstrap/bearer`, refreshes `/api/auth/ws-token`, reuses `T3Code.Native.Client` existing-`/ws` compatibility with Android, and keeps all native desktop work under `apps/native-avalonia/` without changing server/web/desktop/shared code or Electron release scripts.
-- [x] Keep Avalonia release automation separate from existing Electron scripts.
-      Evidence: native Avalonia projects are under `apps/native-avalonia/`; no existing `dist:desktop:*` behavior was changed to package Avalonia output.
-
-## Out Of Scope
-
-- Changing `apps/server`, `apps/web`, `apps/desktop`, `packages/contracts`, or `packages/shared` for native support.
-- Adding `/api/native/descriptor`, `/native/ws`, new RPCs, or mobile-specific behavior to the existing T3 backend.
-- Requiring users to install a T3 fork, modified T3 backend, plugin, or separately installed adapter.
-- Treating missing backend affordances as backend work; native app code must adapt, degrade gracefully, or report an app-side compatibility blocker.
+- [ ] Establish mobile validation command set.
+      Acceptance: `bun --cwd apps/mobile lint`, `typecheck`, `test`,
+      `build`, and `cap:sync:android` pass after scaffold normalization.
+- [ ] Run root validation after scaffold.
+      Acceptance: `bun fmt`, `bun lint`, `bun typecheck`, and
+      `TURBO_ENV_MODE=loose LANG=C LC_ALL=C LANGUAGE=C bun run test` pass or
+      document pre-existing unrelated warnings/failures.
+- [ ] Add emulator install/launch/screenshot smoke script.
+      Acceptance: one documented command builds/syncs/installs/launches and
+      captures screenshots for the key mobile screens.
 
 ## Deferred / Future Work
 
-- Flutter fallback if Avalonia fails the Android decision gate for pairing, stable WebSocket, reconnect after VPN/sleep, and long chat rendering.
-- Side-by-side diff viewer after unified diff is usable.
-- Rich terminal emulation after basic scrollback/input/reconnect works.
-- iOS App Store/TestFlight release after Android proves the architecture and a macOS signing path is available.
+- iOS build, signing, and TestFlight after Android proves UX and backend
+  compatibility.
+- Side-by-side diff viewer after unified diff is stable.
+- Rich terminal emulation after basic scrollback/input works.
+- Native desktop replacement work after the mobile app proves the Ionic client
+  architecture.
