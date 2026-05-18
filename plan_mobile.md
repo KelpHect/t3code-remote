@@ -39,6 +39,7 @@ Installed locally:
 Missing or not configured:
 
 - Pairing against a real desktop backend is not validated yet.
+- Native network discovery for reachable T3 backends is not implemented yet; manual URL entry is currently required.
 - Non-interactive shells that do not source zsh/bash rc files may still see stale Android/Java paths; source the rc file before build checks.
 
 Official setup references:
@@ -120,7 +121,9 @@ mkdir -p apps/native-avalonia/artifacts
 adb exec-out screencap -p > apps/native-avalonia/artifacts/android-emulator-pairing-screen.png
 ```
 
-The emulator reaches the host machine through `http://10.0.2.2:<port>`. For the default T3 backend, try:
+The app should discover reachable T3 backends on the private network and list candidates before pairing. Manual entry remains required for VPNs or networks where scanning is blocked.
+
+The emulator reaches the host machine through `http://10.0.2.2:<port>`. For manual emulator testing of the default T3 backend, try:
 
 ```text
 http://10.0.2.2:3773
@@ -263,18 +266,19 @@ Initial screens:
 ## Implementation Order
 
 1. Build and launch the Android Avalonia shell.
-2. Pair over emulator host networking against the existing desktop backend auth endpoints.
-3. Capture existing `/ws` protocol fixtures from an unmodified local backend.
-4. Implement the existing-`/ws` compatibility transport inside `T3Code.Native.Client`.
-5. Subscribe to shell state and prove synchronized project/thread state using only native app code.
-6. If direct `/ws` handling cannot provide clean parity, add a bundled app-owned compatibility runtime under `apps/native-avalonia/`.
-7. Implement chat read/send/continue/stop, including command IDs and retry behavior.
-8. Implement model picker, runtime mode, and interaction mode against backend-supported options.
-9. Add diff viewer and git action UX.
-10. Add filesystem browse, project create/clone, and terminal.
-11. Run Android VPN/sleep/reconnect and long-chat performance tests.
-12. Start iOS build/test only after Android passes the architecture gate.
-13. Start native desktop client work only within the same app-only boundary: connect to the existing backend, reuse the native compatibility client/runtime, and migrate UI feature-by-feature without changing existing backend/web/desktop code.
+2. Discover reachable existing T3 backends on the private network, with manual URL entry as fallback.
+3. Pair against a discovered or manually entered existing desktop backend auth endpoint.
+4. Capture existing `/ws` protocol fixtures from an unmodified local backend.
+5. Implement the existing-`/ws` compatibility transport inside `T3Code.Native.Client`.
+6. Subscribe to shell state and prove synchronized project/thread state using only native app code.
+7. If direct `/ws` handling cannot provide clean parity, add a bundled app-owned compatibility runtime under `apps/native-avalonia/`.
+8. Implement chat read/send/continue/stop, including command IDs and retry behavior.
+9. Implement model picker, runtime mode, and interaction mode against backend-supported options.
+10. Add diff viewer and git action UX.
+11. Add filesystem browse, project create/clone, and terminal.
+12. Run Android VPN/sleep/reconnect and long-chat performance tests.
+13. Start iOS build/test only after Android passes the architecture gate.
+14. Start native desktop client work only within the same app-only boundary: connect to the existing backend, reuse the native compatibility client/runtime, and migrate UI feature-by-feature without changing existing backend/web/desktop code.
 
 ## Acceptance Tests
 
@@ -297,7 +301,8 @@ Android:
 - `adb devices` shows an emulator or physical device.
 - `dotnet build apps/native-avalonia/T3Code.Native.App.Android/T3Code.Native.App.Android.csproj` succeeds after sourcing zsh/bash rc files.
 - Android app builds, installs, launches, stays focused, and has screenshot evidence at `apps/native-avalonia/artifacts/android-emulator-pairing-screen.png`.
-- Pairing succeeds against a local desktop backend.
+- Discovery lists reachable local T3 backend candidates when the network allows probing.
+- Pairing succeeds against a discovered or manually entered local desktop backend.
 - Manual mobile test continues an existing thread, starts a new project chat, changes model/mode, views edits, commits, pushes, loses/rejoins VPN, and returns to the same synchronized state.
 
 Existing `/ws` compatibility tests:

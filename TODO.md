@@ -35,9 +35,11 @@ Purpose: make the Avalonia Android spike buildable and runnable on an emulator w
       Evidence: `dotnet publish apps/native-avalonia/T3Code.Native.App.Android/T3Code.Native.App.Android.csproj -c Debug` produced `codes.t3.nativeapp-Signed.apk`; `adb install -r .../publish/codes.t3.nativeapp-Signed.apk` succeeded; `adb shell am start -n codes.t3.nativeapp/crc6420cdeeba6ca0b5da.MainActivity` launched and focused the app; screenshot captured at `apps/native-avalonia/artifacts/android-emulator-pairing-screen.png`.
 - [x] Build the Android native app from a clean project state.
       Evidence: `dotnet clean ...Android.csproj` followed by an Android build passed with explicit SDK/JDK properties; after shell rc refresh, plain `dotnet build apps/native-avalonia/T3Code.Native.App.Android/T3Code.Native.App.Android.csproj` also passes from both zsh and bash.
+- [ ] Discover existing T3 backends on the reachable private network instead of relying on a hardcoded URL.
+      Acceptance: the native app exposes a scan action that probes likely private-network candidates, lists reachable T3 backends with host/port/status evidence, and still allows manual entry for VPNs or networks where discovery is blocked. `http://10.0.2.2:3773` is allowed only as an emulator fallback/manual candidate, not as the sole path.
 - [ ] Pair with the existing desktop backend using only existing auth endpoints.
       Evidence: native client implements `/api/auth/bootstrap/bearer` and `/api/auth/ws-token`; existing T3 code changes are not part of the plan.
-      Acceptance: emulator reaches `http://10.0.2.2:3773` or a VPN/LAN backend, exchanges a pairing token, receives a bearer token and ws token, and shows the paired state using only native app code.
+      Acceptance: emulator or phone selects a discovered or manually entered VPN/LAN backend, exchanges a pairing token, receives a bearer token and ws token, and shows the paired state using only native app code.
 
 ## P1 - Existing Backend WebSocket Compatibility
 
@@ -54,7 +56,7 @@ Purpose: unblock real chat/project/git/terminal behavior against an unmodified o
 - [ ] Decide whether direct transport is enough or an app-owned compatibility runtime is needed.
       Acceptance: document the decision with evidence from fixture capture and first shell/thread subscription attempts; if a runtime is needed, it lives under `apps/native-avalonia/`, ships with the app, requires no separate install, and talks only to the original T3 backend.
 - [ ] Replace placeholder shell data with existing-backend `orchestration.subscribeShell`.
-      Acceptance: Android emulator pairs to a local desktop backend at `http://10.0.2.2:3773`, subscribes to shell state over `/ws`, and renders real projects/threads using only native app code.
+      Acceptance: Android emulator or phone pairs to a discovered or manually entered local desktop backend, subscribes to shell state over `/ws`, and renders real projects/threads using only native app code.
 - [ ] Add drift tests for the compatibility transport.
       Acceptance: tests replay captured fixtures and fail narrowly when original-backend wire shapes change; failures identify the impacted method or envelope.
 - [ ] Map existing backend data into app-owned native DTOs.

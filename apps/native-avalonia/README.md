@@ -15,6 +15,8 @@ This app is intentionally not a PWA, not Expo, and not a wrapper around `apps/we
 
 The app targets the original unmodified T3 backend. Users must not need a T3 fork, modified T3 backend, new T3 backend endpoint, modified shared package, plugin, or separately installed adapter.
 
+The app should discover reachable T3 backends on the private network and present candidates for pairing. Manual URL entry remains available for VPNs, emulator fallback, and networks where scanning is blocked.
+
 The existing backend already exposes bearer pairing at `/api/auth/bootstrap/bearer`, short-lived WebSocket tokens at `/api/auth/ws-token`, and the current `/ws` backend protocol used by the web/desktop app. Native compatibility work belongs inside `T3Code.Native.Client`; UI/view models should consume app-owned DTOs and should not depend directly on private wire-format details.
 
 Do not add or depend on `/api/native/descriptor`, `/native/ws`, new RPCs, backend forks, or separately installed adapter processes in the existing T3 codebase for native support. If the existing backend protocol is awkward, handle that in the native compatibility layer or in a bundled app-owned compatibility runtime under `apps/native-avalonia/`.
