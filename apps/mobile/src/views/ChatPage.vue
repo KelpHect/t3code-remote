@@ -15,6 +15,9 @@
           <ion-button aria-label="New chat">
             <ion-icon slot="icon-only" :icon="addOutline" />
           </ion-button>
+          <ion-button aria-label="Open tools" @click="setToolsOpen(true)">
+            <ion-icon slot="icon-only" :icon="ellipsisHorizontalOutline" />
+          </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -31,14 +34,20 @@
         </section>
 
         <section class="thread-controls" aria-label="Chat controls">
-          <ion-button fill="outline" size="small" shape="round">
+          <ion-button fill="outline" size="small" shape="round" @click="setModelModalOpen(true)">
             <ion-icon slot="start" :icon="hardwareChipOutline" />
             GPT-5.5
             <ion-icon slot="end" :icon="chevronDownOutline" />
           </ion-button>
-          <ion-button fill="outline" size="small" shape="round">
+          <ion-button fill="outline" size="small" shape="round" @click="setModelModalOpen(true)">
             <ion-icon slot="start" :icon="codeSlashOutline" />
             Build
+          </ion-button>
+          <ion-button fill="outline" size="small" shape="round" @click="openTool('diff')">
+            Diff
+          </ion-button>
+          <ion-button fill="outline" size="small" shape="round" @click="openTool('git')">
+            Git
           </ion-button>
         </section>
 
@@ -72,11 +81,73 @@
         </div>
       </ion-toolbar>
     </ion-footer>
+
+    <ion-action-sheet
+      :is-open="toolsOpen"
+      header="Thread tools"
+      :buttons="toolActionButtons"
+      @didDismiss="setToolsOpen(false)"
+    />
+
+    <ion-modal :is-open="modelModalOpen" @didDismiss="setModelModalOpen(false)">
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Model and mode</ion-title>
+          <ion-buttons slot="end">
+            <ion-button @click="setModelModalOpen(false)">Done</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="sheet-content">
+        <ion-list lines="full">
+          <ion-item>
+            <ion-label>
+              <h2>Model</h2>
+              <p>GPT-5.5</p>
+            </ion-label>
+            <ion-badge color="primary">Active</ion-badge>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h2>Runtime mode</h2>
+              <p>Build</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h2>Interaction</h2>
+              <p>High - Normal</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+      </ion-content>
+    </ion-modal>
+
+    <ion-modal :is-open="Boolean(activeTool)" @didDismiss="activeTool = null">
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>{{ activeToolDetails.title }}</ion-title>
+          <ion-buttons slot="end">
+            <ion-button @click="activeTool = null">Done</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="sheet-content">
+        <ion-list lines="full">
+          <ion-item v-for="entry in activeToolDetails.entries" :key="entry">
+            <ion-label>{{ entry }}</ion-label>
+          </ion-item>
+        </ion-list>
+        <p class="sheet-note">{{ activeToolDetails.note }}</p>
+      </ion-content>
+    </ion-modal>
   </ion-page>
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from "vue";
 import {
+  IonActionSheet,
   IonBadge,
   IonButton,
   IonButtons,
@@ -84,7 +155,11 @@ import {
   IonFooter,
   IonHeader,
   IonIcon,
+  IonItem,
+  IonLabel,
+  IonList,
   IonMenuButton,
+  IonModal,
   IonPage,
   IonTextarea,
   IonTitle,
@@ -95,6 +170,7 @@ import {
   arrowUpOutline,
   chevronDownOutline,
   codeSlashOutline,
+  ellipsisHorizontalOutline,
   hardwareChipOutline,
   menuOutline,
   stopCircleOutline,
@@ -123,6 +199,101 @@ const messages = [
     text: "Next steps are history navigation, settings, and contextual sheets before backend discovery starts.",
   },
 ] as const;
+
+type ToolId = "diff" | "git" | "files" | "terminal" | "approvals" | "connection";
+
+const toolDetails: Record<ToolId, { title: string; entries: readonly string[]; note: string }> = {
+  diff: {
+    title: "Diff",
+    entries: ["Unified diff", "Changed files", "Full thread diff"],
+    note: "Static placeholder until existing /ws compatibility is implemented.",
+  },
+  git: {
+    title: "Git",
+    entries: ["Status", "Commit", "Push", "Commit and push"],
+    note: "Git actions will stay attached to the selected project/thread.",
+  },
+  files: {
+    title: "Files",
+    entries: ["Browse project", "Add project", "Clone repository"],
+    note: "The desktop backend remains the filesystem authority.",
+  },
+  terminal: {
+    title: "Terminal",
+    entries: ["Open terminal", "Scrollback", "Input", "Resize"],
+    note: "Terminal sessions will be backend-owned and streamed into this sheet.",
+  },
+  approvals: {
+    title: "Approvals",
+    entries: ["Pending decisions", "User input prompts", "Run permissions"],
+    note: "Approval flows must preserve the existing T3 backend boundaries.",
+  },
+  connection: {
+    title: "Connection diagnostics",
+    entries: ["Backend discovery", "Pairing status", "Probe failures"],
+    note: "Discovery starts in P1; this sheet owns the mobile diagnostics surface.",
+  },
+};
+
+const modelModalOpen = ref(false);
+const toolsOpen = ref(false);
+const activeTool = ref<ToolId | null>(null);
+
+const activeToolDetails = computed(() => {
+  if (!activeTool.value) {
+    return {
+      title: "Thread tools",
+      entries: [],
+      note: "",
+    };
+  }
+
+  return toolDetails[activeTool.value];
+});
+
+const setModelModalOpen = (open: boolean) => {
+  modelModalOpen.value = open;
+};
+
+const setToolsOpen = (open: boolean) => {
+  toolsOpen.value = open;
+};
+
+const openTool = (tool: ToolId) => {
+  activeTool.value = tool;
+  toolsOpen.value = false;
+};
+
+const toolActionButtons = [
+  {
+    text: "Diff",
+    handler: () => openTool("diff"),
+  },
+  {
+    text: "Git",
+    handler: () => openTool("git"),
+  },
+  {
+    text: "Files",
+    handler: () => openTool("files"),
+  },
+  {
+    text: "Terminal",
+    handler: () => openTool("terminal"),
+  },
+  {
+    text: "Approvals",
+    handler: () => openTool("approvals"),
+  },
+  {
+    text: "Connection diagnostics",
+    handler: () => openTool("connection"),
+  },
+  {
+    text: "Cancel",
+    role: "cancel",
+  },
+];
 </script>
 
 <style scoped>
@@ -269,6 +440,16 @@ const messages = [
 
 .message-body p:last-child {
   line-height: 1.5;
+}
+
+.sheet-content {
+  --padding-bottom: 1rem;
+}
+
+.sheet-note {
+  margin: 1rem;
+  color: var(--ion-color-medium);
+  line-height: 1.45;
 }
 
 .chat-footer {

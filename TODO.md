@@ -44,7 +44,7 @@ docs.
       threads, settings, and connection status using `IonSearchbar`, `IonList`,
       `IonItem`, `IonLabel`, `IonBadge`, and `IonIcon`; it feels like ChatGPT
       history navigation while preserving T3 Code's project/thread grouping.
-- [ ] Build contextual tools as mobile sheets, modals, or action menus.
+- [x] Build contextual tools as mobile sheets, modals, or action menus.
       Acceptance: model/mode picker, diff, git actions, files, terminal,
       approvals, and connection diagnostics open through `IonModal`,
       `IonActionSheet`, focused pages, or bottom-sheet style overlays; they do
