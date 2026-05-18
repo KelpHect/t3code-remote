@@ -1,0 +1,500 @@
+{
+  "fixtureVersion": 1,
+  "capturedAt": "2026-05-18T21:45:00.000Z",
+  "source": "Unmodified local T3 desktop backend at http://127.0.0.1:3773 using existing desktop auth to mint a short-lived wsToken.",
+  "redactions": {
+    "tokens": "<redacted-token>",
+    "homePath": "<redacted-home>",
+    "workspacePath": "<redacted-workspace>",
+    "repositoryRemote": "<redacted-remote>"
+  },
+  "notes": [
+    "The existing /ws endpoint uses Effect RPC JSON serialization, not the native JSON protocol originally planned.",
+    "Client request ids are decimal strings because Effect parses ids as bigint values.",
+    "Requests include headers: [] even when no custom headers are required.",
+    "Streaming chunks require a client Ack frame for the same requestId.",
+    "Cancellation is sent as Interrupt with the stream requestId."
+  ],
+  "frames": [
+    {
+      "case": "auth.wsTokenIssue",
+      "direction": "http-response",
+      "method": "POST /api/auth/ws-token",
+      "message": {
+        "token": "<redacted-token>",
+        "expiresAt": "2026-05-18T21:50:00.000Z"
+      }
+    },
+    {
+      "case": "server.getConfig.request",
+      "direction": "client-to-server",
+      "message": {
+        "_tag": "Request",
+        "id": "1",
+        "tag": "server.getConfig",
+        "payload": {},
+        "headers": []
+      }
+    },
+    {
+      "case": "server.getConfig.response",
+      "direction": "server-to-client",
+      "message": {
+        "_tag": "Exit",
+        "requestId": "1",
+        "exit": {
+          "_tag": "Success",
+          "value": {
+            "environment": {
+              "environmentId": "<redacted-environment-id>",
+              "label": "<redacted-host-label>",
+              "platform": {
+                "os": "linux",
+                "arch": "x64"
+              },
+              "serverVersion": "0.0.25-nightly.20260515.295",
+              "capabilities": {
+                "repositoryIdentity": true
+              }
+            },
+            "auth": {
+              "policy": "desktop-managed-local",
+              "bootstrapMethods": ["desktop-bootstrap"],
+              "sessionMethods": ["browser-session-cookie", "bearer-session-token"],
+              "sessionCookieName": "t3_session_3773"
+            },
+            "cwd": "<redacted-home>",
+            "keybindingsConfigPath": "<redacted-home>/.t3/userdata/keybindings.json",
+            "keybindings": [
+              {
+                "command": "terminal.toggle",
+                "shortcut": {
+                  "key": "j",
+                  "metaKey": false,
+                  "ctrlKey": false,
+                  "shiftKey": false,
+                  "altKey": false,
+                  "modKey": true
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case": "orchestration.subscribeShell.request",
+      "direction": "client-to-server",
+      "message": {
+        "_tag": "Request",
+        "id": "2",
+        "tag": "orchestration.subscribeShell",
+        "payload": {},
+        "headers": []
+      }
+    },
+    {
+      "case": "orchestration.subscribeShell.snapshotChunk",
+      "direction": "server-to-client",
+      "message": {
+        "_tag": "Chunk",
+        "requestId": "2",
+        "values": [
+          {
+            "kind": "snapshot",
+            "snapshot": {
+              "snapshotSequence": 63355,
+              "projects": [
+                {
+                  "id": "<redacted-project-id>",
+                  "title": "t3code-remote",
+                  "workspaceRoot": "<redacted-workspace>",
+                  "repositoryIdentity": {
+                    "canonicalKey": "github.com/<redacted-owner>/t3code-remote",
+                    "locator": {
+                      "source": "git-remote",
+                      "remoteName": "origin",
+                      "remoteUrl": "<redacted-remote>"
+                    },
+                    "rootPath": "<redacted-workspace>",
+                    "displayName": "<redacted-owner>/t3code-remote",
+                    "provider": "github",
+                    "owner": "<redacted-owner>",
+                    "name": "t3code-remote"
+                  },
+                  "defaultModelSelection": {
+                    "instanceId": "codex",
+                    "model": "gpt-5.4"
+                  },
+                  "scripts": [],
+                  "createdAt": "2026-05-13T11:26:41.537Z",
+                  "updatedAt": "2026-05-13T11:26:41.537Z"
+                }
+              ],
+              "threads": [
+                {
+                  "id": "<redacted-thread-id>",
+                  "projectId": "<redacted-project-id>",
+                  "title": "PLEASE IMPLEMENT THIS PLAN: # Native T3 Remote Cli...",
+                  "modelSelection": {
+                    "instanceId": "codex",
+                    "model": "gpt-5.5",
+                    "options": [
+                      {
+                        "id": "reasoningEffort",
+                        "value": "high"
+                      }
+                    ]
+                  },
+                  "runtimeMode": "full-access",
+                  "interactionMode": "default",
+                  "branch": "main",
+                  "worktreePath": null,
+                  "archivedAt": null,
+                  "hasPendingApprovals": false,
+                  "hasPendingUserInput": false,
+                  "hasActionableProposedPlan": false
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "case": "orchestration.subscribeShell.ack",
+      "direction": "client-to-server",
+      "message": {
+        "_tag": "Ack",
+        "requestId": "2"
+      }
+    },
+    {
+      "case": "orchestration.subscribeShell.incrementalChunk",
+      "direction": "server-to-client",
+      "message": {
+        "_tag": "Chunk",
+        "requestId": "2",
+        "values": [
+          {
+            "kind": "thread-upserted",
+            "sequence": 63356,
+            "thread": {
+              "id": "<redacted-thread-id>",
+              "projectId": "<redacted-project-id>",
+              "title": "PLEASE IMPLEMENT THIS PLAN: # Native T3 Remote Cli...",
+              "runtimeMode": "full-access",
+              "interactionMode": "default",
+              "branch": "main",
+              "worktreePath": null,
+              "updatedAt": "2026-05-18T21:44:24.889Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "case": "orchestration.subscribeThread.request",
+      "direction": "client-to-server",
+      "message": {
+        "_tag": "Request",
+        "id": "3",
+        "tag": "orchestration.subscribeThread",
+        "payload": {
+          "threadId": "<redacted-thread-id>"
+        },
+        "headers": []
+      }
+    },
+    {
+      "case": "orchestration.subscribeThread.chunk",
+      "direction": "server-to-client",
+      "message": {
+        "_tag": "Chunk",
+        "requestId": "3",
+        "values": [
+          {
+            "kind": "snapshot",
+            "snapshot": {
+              "snapshotSequence": 63356,
+              "thread": {
+                "id": "<redacted-thread-id>",
+                "projectId": "<redacted-project-id>",
+                "messages": [
+                  {
+                    "messageId": "<redacted-message-id>",
+                    "role": "user",
+                    "text": "<redacted-message-text>",
+                    "attachments": []
+                  }
+                ],
+                "turns": []
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "case": "orchestration.dispatchCommand.request",
+      "direction": "client-to-server",
+      "message": {
+        "_tag": "Request",
+        "id": "4",
+        "tag": "orchestration.dispatchCommand",
+        "payload": {
+          "type": "thread.turn.interrupt",
+          "commandId": "<redacted-command-id>",
+          "threadId": "<redacted-thread-id>",
+          "createdAt": "2026-05-18T21:45:00.000Z"
+        },
+        "headers": []
+      }
+    },
+    {
+      "case": "orchestration.dispatchCommand.response",
+      "direction": "server-to-client",
+      "message": {
+        "_tag": "Exit",
+        "requestId": "4",
+        "exit": {
+          "_tag": "Success",
+          "value": {
+            "sequence": 63357
+          }
+        }
+      }
+    },
+    {
+      "case": "orchestration.getTurnDiff.request",
+      "direction": "client-to-server",
+      "message": {
+        "_tag": "Request",
+        "id": "5",
+        "tag": "orchestration.getTurnDiff",
+        "payload": {
+          "threadId": "<redacted-thread-id>",
+          "fromTurnCount": 0,
+          "toTurnCount": 1,
+          "ignoreWhitespace": false
+        },
+        "headers": []
+      }
+    },
+    {
+      "case": "orchestration.getTurnDiff.response",
+      "direction": "server-to-client",
+      "message": {
+        "_tag": "Exit",
+        "requestId": "5",
+        "exit": {
+          "_tag": "Success",
+          "value": {
+            "files": [
+              {
+                "oldPath": "<redacted-workspace>/TODO.md",
+                "newPath": "<redacted-workspace>/TODO.md",
+                "status": "modified",
+                "hunks": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case": "filesystem.browse.request",
+      "direction": "client-to-server",
+      "message": {
+        "_tag": "Request",
+        "id": "6",
+        "tag": "filesystem.browse",
+        "payload": {
+          "partialPath": "<redacted-workspace>",
+          "cwd": "<redacted-home>"
+        },
+        "headers": []
+      }
+    },
+    {
+      "case": "filesystem.browse.response",
+      "direction": "server-to-client",
+      "message": {
+        "_tag": "Exit",
+        "requestId": "6",
+        "exit": {
+          "_tag": "Success",
+          "value": {
+            "parentPath": "<redacted-home>/Projects",
+            "entries": [
+              {
+                "name": "t3code-remote",
+                "fullPath": "<redacted-workspace>"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case": "vcs.refreshStatus.request",
+      "direction": "client-to-server",
+      "message": {
+        "_tag": "Request",
+        "id": "7",
+        "tag": "vcs.refreshStatus",
+        "payload": {
+          "cwd": "<redacted-workspace>"
+        },
+        "headers": []
+      }
+    },
+    {
+      "case": "vcs.refreshStatus.response",
+      "direction": "server-to-client",
+      "message": {
+        "_tag": "Exit",
+        "requestId": "7",
+        "exit": {
+          "_tag": "Success",
+          "value": {
+            "cwd": "<redacted-workspace>",
+            "branch": "main",
+            "ahead": 0,
+            "behind": 0,
+            "files": []
+          }
+        }
+      }
+    },
+    {
+      "case": "git.runStackedAction.request",
+      "direction": "client-to-server",
+      "message": {
+        "_tag": "Request",
+        "id": "8",
+        "tag": "git.runStackedAction",
+        "payload": {
+          "actionId": "<redacted-action-id>",
+          "cwd": "<redacted-workspace>",
+          "action": "status"
+        },
+        "headers": []
+      }
+    },
+    {
+      "case": "git.runStackedAction.progressChunk",
+      "direction": "server-to-client",
+      "message": {
+        "_tag": "Chunk",
+        "requestId": "8",
+        "values": [
+          {
+            "actionId": "<redacted-action-id>",
+            "cwd": "<redacted-workspace>",
+            "action": "status",
+            "kind": "phase_started",
+            "phase": "status",
+            "label": "Checking status..."
+          }
+        ]
+      }
+    },
+    {
+      "case": "terminal.open.request",
+      "direction": "client-to-server",
+      "message": {
+        "_tag": "Request",
+        "id": "9",
+        "tag": "terminal.open",
+        "payload": {
+          "threadId": "<redacted-thread-id>",
+          "terminalId": "default",
+          "cwd": "<redacted-workspace>",
+          "worktreePath": null,
+          "cols": 80,
+          "rows": 24
+        },
+        "headers": []
+      }
+    },
+    {
+      "case": "subscribeTerminalEvents.chunk",
+      "direction": "server-to-client",
+      "message": {
+        "_tag": "Chunk",
+        "requestId": "10",
+        "values": [
+          {
+            "type": "started",
+            "threadId": "<redacted-thread-id>",
+            "terminalId": "default",
+            "createdAt": "2026-05-18T21:45:00.000Z",
+            "snapshot": {
+              "threadId": "<redacted-thread-id>",
+              "terminalId": "default",
+              "cwd": "<redacted-workspace>",
+              "worktreePath": null,
+              "status": "running",
+              "pid": 12345,
+              "history": "",
+              "exitCode": null,
+              "exitSignal": null,
+              "updatedAt": "2026-05-18T21:45:00.000Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "case": "heartbeat.ping",
+      "direction": "client-to-server",
+      "message": {
+        "_tag": "Ping"
+      }
+    },
+    {
+      "case": "heartbeat.pong",
+      "direction": "server-to-client",
+      "message": {
+        "_tag": "Pong"
+      }
+    },
+    {
+      "case": "stream.cancel",
+      "direction": "client-to-server",
+      "message": {
+        "_tag": "Interrupt",
+        "requestId": "2"
+      }
+    },
+    {
+      "case": "malformed.invalidRequestId",
+      "direction": "server-to-client",
+      "message": {
+        "_tag": "Defect",
+        "defect": "Invalid request id: 1"
+      }
+    },
+    {
+      "case": "error.schemaFailure",
+      "direction": "server-to-client",
+      "message": {
+        "_tag": "Exit",
+        "requestId": "11",
+        "exit": {
+          "_tag": "Failure",
+          "cause": [
+            {
+              "_tag": "Fail",
+              "error": {
+                "_tag": "<redacted-error-tag>",
+                "message": "<redacted-error-message>"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

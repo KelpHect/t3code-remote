@@ -45,12 +45,7 @@
           </ion-item>
         </ion-list>
 
-        <ion-list
-          v-for="project in projects"
-          :key="project.id"
-          class="project-list"
-          lines="none"
-        >
+        <ion-list v-for="project in projects" :key="project.id" class="project-list" lines="none">
           <ion-item-divider class="project-heading">
             <ion-icon :icon="chevronDownOutline" />
             <ion-icon :icon="folderOutline" />
@@ -86,12 +81,10 @@
 import { onMounted, onUnmounted } from "vue";
 import {
   IonApp,
-  IonBadge,
   IonContent,
   IonHeader,
   IonIcon,
   IonItem,
-  IonItemDivider,
   IonLabel,
   IonList,
   IonMenu,

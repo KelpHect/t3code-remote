@@ -197,7 +197,11 @@ code and tests only.
 
 ### Protocol
 
-- [ ] Capture redacted current `/ws` fixtures from an unmodified local backend.
+- [x] Capture redacted current `/ws` fixtures from an unmodified local backend.
+      Evidence: `apps/mobile/src/client/ws/__fixtures__/current-backend.redacted.json`
+      records the existing Effect RPC `/ws` envelope from the running
+      unmodified desktop backend with tokens, home paths, workspace paths,
+      repository remotes, ids, and message text redacted.
       Acceptance: fixtures cover auth, request/response, shell subscription,
       thread subscription, command dispatch, diffs, filesystem, git, terminal,
       cancellation, and errors; no tokens or private paths are present.
