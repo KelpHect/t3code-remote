@@ -16,6 +16,7 @@
     "cap:sync:android": "capacitor sync android"
   },
   "dependencies": {
+    "@capacitor/core": "^8.3.4",
     "@ionic/vue": "^8.0.0",
     "@ionic/vue-router": "^8.0.0",
     "ionicons": "^7.0.0",
@@ -23,6 +24,8 @@
     "vue-router": "^4.2.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
     "@eslint/js": "^10.0.1",
     "@typescript-eslint/eslint-plugin": "^8.59.3",
     "@typescript-eslint/parser": "^8.59.3",

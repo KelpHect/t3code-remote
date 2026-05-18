@@ -102,7 +102,7 @@ docs.
       `output.format: system`.
       Acceptance: Vite config is compatible with the repo toolchain and
       `bun --cwd apps/mobile build` passes.
-- [ ] Add Capacitor Android to `apps/mobile/`.
+- [x] Add Capacitor Android to `apps/mobile/`.
       Acceptance: Capacitor config exists, Android platform is generated under
       `apps/mobile/android/`, package id/display name are explicit, and
       `bun --cwd apps/mobile cap:sync:android` succeeds.
