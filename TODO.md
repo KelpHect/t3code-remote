@@ -130,20 +130,33 @@ endpoints or change existing auth behavior.
 
 ### Discovery
 
-- [ ] Implement backend candidate generation.
+- [x] Implement backend candidate generation.
+      Evidence: `apps/mobile/src/client/discovery.ts` generates emulator,
+      desktop/browser, current-host LAN, and manual candidates with URL
+      normalization and duplicate removal.
       Acceptance: Android emulator probes `http://10.0.2.2:3773` first;
       desktop/browser dev probes `http://127.0.0.1:3773` and
       `http://localhost:3773`; LAN/VPN probing is supported where platform APIs
       allow; manual URL entry is always available.
-- [ ] Implement `GET /api/auth/session` probe.
+- [x] Implement `GET /api/auth/session` probe.
+      Evidence: `probeBackendCandidate` calls `/api/auth/session`, accepts
+      unauthenticated T3 auth JSON, and classifies timeout, connection-refused,
+      invalid-response, cleartext-blocked, and unknown failures.
       Acceptance: any candidate returning T3 auth JSON is treated as a valid
       backend even when `authenticated` is false; failed probes are classified
       into timeout, connection refused, invalid response, blocked cleartext, or
       unknown error.
-- [ ] Surface discovery diagnostics in the UI.
+- [x] Surface discovery diagnostics in the UI.
+      Evidence: chat, navigation drawer, connection tool sheet, and settings
+      screen consume shared live discovery state with candidate counts, selected
+      backend, probe rows, scan status, and rescan controls.
       Acceptance: connection screen shows candidate count, selected backend,
       probe status, and emulator guidance when no backend is found.
-- [ ] Add discovery tests.
+- [x] Add discovery tests.
+      Evidence: `apps/mobile/tests/unit/discovery.spec.ts` covers URL
+      normalization, emulator priority, duplicate removal, web defaults,
+      unauthenticated T3 session detection, invalid responses, timeouts, and
+      refused probes.
       Acceptance: tests cover emulator host priority, duplicate candidate
       removal, successful unauthenticated backend detection, timeout handling,
       and invalid-response rejection.

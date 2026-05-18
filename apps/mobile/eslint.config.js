@@ -4,12 +4,18 @@ import js from "@eslint/js";
 import vue from "eslint-plugin-vue";
 
 const browserGlobals = {
+  AbortController: "readonly",
+  clearTimeout: "readonly",
   document: "readonly",
+  DOMException: "readonly",
   fetch: "readonly",
   localStorage: "readonly",
   navigator: "readonly",
+  Response: "readonly",
+  setTimeout: "readonly",
   URL: "readonly",
   window: "readonly",
+  Window: "readonly",
 };
 
 const nodeGlobals = {

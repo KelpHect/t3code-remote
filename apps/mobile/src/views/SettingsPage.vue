@@ -17,7 +17,7 @@
           <p class="eyebrow">Private network</p>
           <h1>Connect to T3 Code</h1>
           <p>Pair with an existing desktop backend over emulator host networking, LAN, or VPN.</p>
-          <ion-badge color="medium">Not connected</ion-badge>
+          <ion-badge :color="selectedBackend ? 'success' : 'medium'">{{ statusText }}</ion-badge>
         </section>
 
         <ion-list class="settings-list" lines="full">
@@ -28,21 +28,46 @@
             <ion-icon slot="start" :icon="scanOutline" />
             <ion-label>
               <h2>Auto-discover local backends</h2>
-              <p>Probe emulator host, localhost, LAN, and VPN candidates.</p>
+              <p>{{ statusDetail }}</p>
             </ion-label>
             <ion-toggle slot="end" :checked="true" aria-label="Auto-discover backends" />
           </ion-item>
           <ion-item>
             <ion-icon slot="start" :icon="linkOutline" />
-            <ion-input label="Manual backend URL" label-placement="stacked" value="" />
+            <ion-input
+              label="Manual backend URL"
+              label-placement="stacked"
+              placeholder="http://10.0.2.2:3773"
+              :value="manualUrl"
+              @ionInput="setManualUrl(String($event.detail.value ?? ''))"
+            />
           </ion-item>
           <ion-item>
             <ion-icon slot="start" :icon="analyticsOutline" />
             <ion-label>
               <h2>Diagnostics</h2>
-              <p>Last scan has not run yet.</p>
+              <p>{{ diagnosticsText }}</p>
             </ion-label>
-            <ion-button fill="outline" size="small">Scan</ion-button>
+            <ion-spinner v-if="discoveryState === 'scanning'" name="crescent" />
+            <ion-button v-else fill="outline" size="small" @click="scanBackends">Scan</ion-button>
+          </ion-item>
+          <ion-item v-for="result in probeResults" :key="result.candidate.id" class="probe-item">
+            <ion-label>
+              <h2>{{ result.candidate.label }}</h2>
+              <p>{{ result.candidate.url }}</p>
+              <p>{{ result.message }}</p>
+            </ion-label>
+            <ion-badge
+              :color="
+                result.status === 'valid'
+                  ? 'success'
+                  : result.status === 'probing'
+                    ? 'primary'
+                    : 'medium'
+              "
+            >
+              {{ result.status }}
+            </ion-badge>
           </ion-item>
         </ion-list>
 
@@ -104,7 +129,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import {
   IonBadge,
   IonButton,
@@ -120,6 +145,7 @@ import {
   IonMenuButton,
   IonNote,
   IonPage,
+  IonSpinner,
   IonTextarea,
   IonTitle,
   IonToggle,
@@ -136,7 +162,34 @@ import {
   shieldCheckmarkOutline,
 } from "ionicons/icons";
 
+import { useConnectionState } from "@/client/connectionState";
+
+const {
+  candidateCount,
+  discoveryState,
+  manualUrl,
+  probeResults,
+  scanBackends,
+  selectedBackend,
+  setManualUrl,
+  statusDetail,
+  statusText,
+} = useConnectionState();
+
 const darkMode = ref(document.body.classList.contains("dark"));
+
+const diagnosticsText = computed(() => {
+  if (discoveryState.value === "scanning") {
+    return `Scanning ${candidateCount.value} backend candidate${candidateCount.value === 1 ? "" : "s"}.`;
+  }
+  if (selectedBackend.value) {
+    return `Selected ${selectedBackend.value.candidate.url}.`;
+  }
+  if (probeResults.value.length > 0) {
+    return "No reachable backend found. Check desktop T3 and private-network access.";
+  }
+  return "Discovery will run automatically while the app is open.";
+});
 
 const setDarkMode = (event: { detail: { checked: boolean } }) => {
   darkMode.value = event.detail.checked;
@@ -203,6 +256,13 @@ const setDarkMode = (event: { detail: { checked: boolean } }) => {
 
 .settings-list ion-icon {
   color: var(--ion-color-medium);
+}
+
+.probe-item h2,
+.probe-item p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 ion-item-divider {

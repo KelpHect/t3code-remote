@@ -22,9 +22,9 @@
             <ion-icon slot="start" :icon="wifiOutline" />
             <ion-label>
               <h2>Connection</h2>
-              <p>Not connected</p>
+              <p>{{ statusDetail }}</p>
             </ion-label>
-            <ion-badge color="medium">Local</ion-badge>
+            <ion-badge :color="selectedBackend ? 'success' : 'medium'">{{ statusText }}</ion-badge>
           </ion-item>
         </ion-list>
 
@@ -61,6 +61,7 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, onUnmounted } from "vue";
 import {
   IonApp,
   IonBadge,
@@ -78,6 +79,19 @@ import {
   IonToolbar,
 } from "@ionic/vue";
 import { addOutline, chatbubbleOutline, settingsOutline, wifiOutline } from "ionicons/icons";
+
+import { useConnectionState } from "@/client/connectionState";
+
+const { selectedBackend, startDiscoveryLoop, statusDetail, statusText, stopDiscoveryLoop } =
+  useConnectionState();
+
+onMounted(() => {
+  startDiscoveryLoop();
+});
+
+onUnmounted(() => {
+  stopDiscoveryLoop();
+});
 
 const projects = [
   {

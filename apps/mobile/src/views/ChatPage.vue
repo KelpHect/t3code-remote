@@ -8,8 +8,8 @@
           </ion-menu-button>
         </ion-buttons>
         <ion-title>
-          <span class="chat-title">Mobile UI rebuild</span>
-          <span class="chat-subtitle">t3code-remote</span>
+          <span class="chat-title">T3 Code</span>
+          <span class="chat-subtitle">{{ headerSubtitle }}</span>
         </ion-title>
         <ion-buttons slot="end">
           <ion-button aria-label="New chat" @click="setEmptyChat(true)">
@@ -26,11 +26,24 @@
       <main class="chat-thread" aria-label="Chat thread">
         <section class="thread-status" aria-label="Current project status">
           <div>
-            <p class="eyebrow">Working</p>
+            <p class="eyebrow">{{ selectedBackend ? "Ready" : "Discovery" }}</p>
             <h1>T3 Code</h1>
-            <p>Private backend discovery is not connected yet.</p>
+            <p>{{ statusDetail }}</p>
           </div>
-          <ion-badge color="medium">Local</ion-badge>
+          <ion-badge :color="selectedBackend ? 'success' : 'medium'">{{ statusText }}</ion-badge>
+        </section>
+
+        <section class="connection-strip" aria-live="polite">
+          <span
+            class="live-dot"
+            :class="{ active: discoveryState === 'scanning', connected: Boolean(selectedBackend) }"
+          />
+          <div>
+            <strong>{{ statusText }}</strong>
+            <p>{{ connectionSummary }}</p>
+          </div>
+          <ion-spinner v-if="discoveryState === 'scanning'" name="crescent" />
+          <ion-button v-else fill="clear" size="small" @click="scanBackends">Scan</ion-button>
         </section>
 
         <section class="thread-controls" aria-label="Chat controls">
@@ -49,14 +62,24 @@
           <ion-button fill="outline" size="small" shape="round" @click="openTool('git')">
             Git
           </ion-button>
+          <ion-button fill="outline" size="small" shape="round" @click="openTool('files')">
+            Files
+          </ion-button>
+          <ion-button fill="outline" size="small" shape="round" @click="openTool('terminal')">
+            Terminal
+          </ion-button>
         </section>
 
         <section v-if="emptyChat" class="empty-chat" aria-label="Empty chat">
+          <div class="empty-logo">T3</div>
           <h1>T3 Code</h1>
-          <p>Start a project chat once a backend is paired.</p>
-          <ion-button fill="outline" shape="round" @click="setEmptyChat(false)">
-            View sample thread
-          </ion-button>
+          <p>{{ emptyChatCopy }}</p>
+          <div class="empty-actions">
+            <ion-button shape="round" @click="setEmptyChat(false)">View sample thread</ion-button>
+            <ion-button fill="clear" shape="round" @click="openTool('connection')">
+              Connection
+            </ion-button>
+          </div>
         </section>
 
         <section v-else class="message-list" aria-label="Messages">
@@ -215,6 +238,37 @@ Success</code></pre>
           </div>
         </section>
 
+        <section v-else-if="activeTool === 'connection'" class="tool-workspace">
+          <div class="connection-tool-head">
+            <div>
+              <p class="eyebrow">Live discovery</p>
+              <h2>{{ statusText }}</h2>
+              <p>{{ statusDetail }}</p>
+            </div>
+            <ion-button fill="outline" size="small" @click="scanBackends">Rescan</ion-button>
+          </div>
+          <ion-list lines="full">
+            <ion-item v-for="result in probeResults" :key="result.candidate.id">
+              <ion-label>
+                <h2>{{ result.candidate.label }}</h2>
+                <p>{{ result.candidate.url }}</p>
+                <p>{{ result.message }}</p>
+              </ion-label>
+              <ion-badge
+                :color="
+                  result.status === 'valid'
+                    ? 'success'
+                    : result.status === 'probing'
+                      ? 'primary'
+                      : 'medium'
+                "
+              >
+                {{ result.status }}
+              </ion-badge>
+            </ion-item>
+          </ion-list>
+        </section>
+
         <section v-else class="tool-workspace">
           <ion-list lines="full">
             <ion-item v-for="entry in activeToolDetails.entries" :key="entry">
@@ -245,6 +299,7 @@ import {
   IonMenuButton,
   IonModal,
   IonPage,
+  IonSpinner,
   IonTextarea,
   IonTitle,
   IonToolbar,
@@ -261,6 +316,19 @@ import {
   menuOutline,
   stopCircleOutline,
 } from "ionicons/icons";
+
+import { useConnectionState } from "@/client/connectionState";
+
+const {
+  candidateCount,
+  discoveryState,
+  probeResults,
+  scanBackends,
+  selectedBackend,
+  statusDetail,
+  statusText,
+  validBackends,
+} = useConnectionState();
 
 const messages = [
   {
@@ -343,6 +411,33 @@ const modelModalOpen = ref(false);
 const toolsOpen = ref(false);
 const activeTool = ref<ToolId | null>(null);
 const emptyChat = ref(false);
+
+const connectionSummary = computed(() => {
+  if (selectedBackend.value) {
+    return selectedBackend.value.authenticated
+      ? "Bearer session is active for this backend."
+      : "Backend is reachable; pair to unlock projects and threads.";
+  }
+  if (discoveryState.value === "scanning") {
+    return `Checking ${candidateCount.value} private-network candidate${candidateCount.value === 1 ? "" : "s"}.`;
+  }
+  if (validBackends.value.length === 0 && probeResults.value.length > 0) {
+    return "No reachable T3 backend yet. Keep desktop T3 running and rescan.";
+  }
+  return "Discovery runs in the background while the app is open.";
+});
+
+const headerSubtitle = computed(() => {
+  if (selectedBackend.value) return selectedBackend.value.candidate.url;
+  if (discoveryState.value === "scanning") return "Scanning for desktop backend";
+  return "Private-network mobile client";
+});
+
+const emptyChatCopy = computed(() =>
+  selectedBackend.value
+    ? "Backend is reachable. Pair or select an existing project to continue working."
+    : "Keep the desktop app running; this screen updates as soon as a reachable backend is found.",
+);
 
 const activeToolDetails = computed(() => {
   if (!activeTool.value) {
@@ -432,7 +527,10 @@ const toolActionButtons = [
 }
 
 .chat-thread {
+  width: 100%;
+  max-width: var(--t3-page-max-width);
   min-height: 100%;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -445,6 +543,49 @@ const toolActionButtons = [
   justify-content: space-between;
   gap: 1rem;
   padding-top: 1.25rem;
+}
+
+.connection-strip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: 1rem;
+  background: var(--t3-panel-background);
+  padding: 0.75rem;
+}
+
+.connection-strip ion-spinner {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.connection-strip strong,
+.connection-strip p {
+  margin: 0;
+}
+
+.connection-strip p {
+  color: var(--ion-color-medium);
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.live-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  background: var(--ion-color-medium);
+}
+
+.live-dot.active {
+  background: var(--ion-color-primary);
+  box-shadow: 0 0 0 0.35rem rgba(var(--ion-color-primary-rgb), 0.14);
+}
+
+.live-dot.connected {
+  background: var(--ion-color-success);
 }
 
 .thread-status > div {
@@ -480,9 +621,15 @@ const toolActionButtons = [
 
 .thread-controls {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.5rem;
+  overflow-x: auto;
   padding-bottom: 0.25rem;
+  scrollbar-width: none;
+}
+
+.thread-controls::-webkit-scrollbar {
+  display: none;
 }
 
 .thread-controls ion-button {
@@ -508,6 +655,24 @@ const toolActionButtons = [
   min-height: 20rem;
   padding: 2rem 1rem;
   text-align: center;
+}
+
+.empty-logo {
+  width: 4rem;
+  height: 4rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: 1.25rem;
+  background: var(--t3-panel-background);
+  font-weight: 800;
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .empty-chat h1,
@@ -599,6 +764,31 @@ const toolActionButtons = [
   display: grid;
   gap: 1rem;
   padding: 1rem;
+}
+
+.connection-tool-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: 1rem;
+  background: var(--t3-panel-background);
+  padding: 1rem;
+}
+
+.connection-tool-head h2,
+.connection-tool-head p {
+  margin: 0;
+}
+
+.connection-tool-head h2 {
+  font-size: 1.35rem;
+}
+
+.connection-tool-head p:not(.eyebrow) {
+  color: var(--ion-color-medium);
+  line-height: 1.4;
 }
 
 .tool-summary {
@@ -698,6 +888,9 @@ const toolActionButtons = [
 }
 
 .composer-shell {
+  width: 100%;
+  max-width: var(--t3-page-max-width);
+  margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: end;
