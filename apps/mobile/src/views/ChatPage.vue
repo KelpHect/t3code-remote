@@ -101,7 +101,7 @@
 
     <ion-footer class="chat-footer">
       <ion-toolbar>
-        <div class="composer-shell">
+        <div class="composer-frame">
           <ion-textarea
             aria-label="Message"
             auto-grow
@@ -109,12 +109,37 @@
             placeholder="Message"
             :rows="1"
           />
-          <ion-button shape="round" aria-label="Send message">
-            <ion-icon slot="icon-only" :icon="arrowUpOutline" />
-          </ion-button>
-          <ion-button fill="clear" class="stop-button" aria-label="Stop current run">
-            <ion-icon slot="icon-only" :icon="stopCircleOutline" />
-          </ion-button>
+          <div class="composer-tools" aria-label="Composer controls">
+            <div class="composer-tool-group">
+              <ion-button
+                fill="clear"
+                size="small"
+                class="composer-chip"
+                @click="setModelModalOpen(true)"
+              >
+                <ion-icon slot="start" :icon="hardwareChipOutline" />
+                GPT-5.5
+                <ion-icon slot="end" :icon="chevronDownOutline" />
+              </ion-button>
+              <ion-button
+                fill="clear"
+                size="small"
+                class="composer-chip"
+                @click="setModelModalOpen(true)"
+              >
+                High · Normal
+                <ion-icon slot="end" :icon="chevronDownOutline" />
+              </ion-button>
+            </div>
+            <div class="composer-action-group">
+              <ion-button fill="clear" class="stop-button" aria-label="Stop current run">
+                <ion-icon slot="icon-only" :icon="stopCircleOutline" />
+              </ion-button>
+              <ion-button class="send-button" shape="round" aria-label="Send message">
+                <ion-icon slot="icon-only" :icon="arrowUpOutline" />
+              </ion-button>
+            </div>
+          </div>
         </div>
       </ion-toolbar>
     </ion-footer>
@@ -884,31 +909,94 @@ const toolActionButtons = [
 }
 
 .chat-footer {
-  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid var(--t3-toolbar-border);
+  background: var(--ion-background-color);
+  padding: 0.45rem 0 calc(0.45rem + env(safe-area-inset-bottom));
 }
 
-.composer-shell {
+.chat-footer ion-toolbar {
+  --background: transparent;
+  --border-width: 0;
+  --min-height: 0;
+  --padding-bottom: 0;
+  --padding-end: 0;
+  --padding-start: 0;
+  --padding-top: 0;
+}
+
+.composer-frame {
   width: 100%;
   max-width: var(--t3-page-max-width);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: end;
+  gap: 0.2rem;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: 1.45rem;
+  background: var(--t3-composer-background);
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08);
+  padding: 0.35rem 0.45rem 0.35rem 0.85rem;
+}
+
+.composer-frame ion-textarea {
+  --background: transparent;
+  --border-radius: 0;
+  --padding-bottom: 0.35rem;
+  --padding-end: 0.35rem;
+  --padding-start: 0;
+  --padding-top: 0.45rem;
+  min-height: 2.35rem;
+}
+
+.composer-tools {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
 }
 
-.composer-shell ion-textarea {
-  min-height: 2.75rem;
+.composer-tool-group,
+.composer-action-group {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.2rem;
 }
 
-.composer-shell ion-button {
-  width: 2.75rem;
-  height: 2.75rem;
+.composer-tool-group {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.composer-tool-group::-webkit-scrollbar {
+  display: none;
+}
+
+.composer-chip {
+  --border-radius: 999px;
+  --color: var(--ion-color-medium);
+  flex-shrink: 0;
+  height: 2rem;
+  font-size: 0.76rem;
+  font-weight: 650;
+  text-transform: none;
+}
+
+.composer-action-group ion-button {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
   margin: 0;
 }
 
-.composer-shell .stop-button {
+.composer-action-group .stop-button {
   --color: var(--ion-color-medium);
+}
+
+.send-button {
+  --background: var(--ion-text-color);
+  --background-activated: var(--ion-color-step-700);
+  --background-focused: var(--ion-color-step-700);
+  --color: var(--ion-background-color);
 }
 </style>
