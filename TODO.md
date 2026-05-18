@@ -80,8 +80,8 @@ Purpose: make the reusable native client robust enough for mobile sleep/VPN tran
       Evidence: `NativeCommandOutbox` persists retryable command records through `INativeCommandOutboxStore`; `JsonFileNativeCommandOutboxStore` proves restart survival without platform coupling, and `MemoryNativeCommandOutboxStore` keeps tests/spikes lightweight. `NativeCommandOutboxTests` covers enqueue, restart load, replay attempt increment, completion removal, and command-id upsert semantics.
 - [x] Add ws-token refresh/reconnect flow.
       Evidence: `RefreshingExistingWsRpcSession` issues short-lived `/ws` URLs through `IExistingWsUriProvider`, retries authentication failures once with a fresh token, reconnects through `ExistingWsRpcSession.ReconnectAsync(Uri, ...)`, and lets the existing replay filter resend only active operations. `BearerTokenExistingWsUriProvider` renews ws-tokens from the stored bearer token. `RefreshingExistingWsRpcSessionTests` covers expired-token reconnect, active request replay, canceled subscription non-replay, and final auth denial through `ExistingWsAuthenticationException`.
-- [ ] Add bounded backoff and network-state reporting.
-      Acceptance: tests cover transient disconnect, repeated failure, cancellation, and UI-visible state transitions.
+- [x] Add bounded backoff and network-state reporting.
+      Evidence: `NativeReconnectLoop` wraps a reconnectable session with `NativeConnectionState` updates for connecting, connected, disconnected, reconnecting, waiting-to-retry, offline, and cancelled states. `BoundedExponentialBackoff` caps retry delays. `NativeReconnectLoopTests` covers transient disconnect/reconnect, repeated failures with capped delay and offline reporting, and cancellation without retry.
 - [ ] Replace in-memory production token storage with platform secure storage.
       Evidence: `MemorySecretStore` exists and is documented as spike-only.
       Acceptance: Android uses a secure platform-backed store or a clearly isolated adapter, with tests for save/load/clear semantics.
