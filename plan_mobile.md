@@ -242,6 +242,11 @@ transport tests cover the required frame types. Do not add a bundled helper
 runtime unless later methods require serialization behavior that cannot be kept
 small and isolated in C#.
 
+The first real data path is implemented: after pairing, `MainViewModel` opens an
+existing `/ws` session and subscribes to `orchestration.subscribeShell` through
+`NativeShellClient`. A live desktop-backend check received a real shell snapshot
+through the C# transport.
+
 ## Native App Shape
 
 Current projects:

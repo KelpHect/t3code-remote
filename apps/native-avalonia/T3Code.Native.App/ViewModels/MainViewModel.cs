@@ -5,8 +5,11 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Avalonia.Threading;
 using T3Code.Native.Client.Auth;
 using T3Code.Native.Client.Discovery;
+using T3Code.Native.Client.Shell;
+using T3Code.Native.Client.Transport;
 
 namespace T3Code.Native.App.ViewModels;
 
@@ -40,12 +43,12 @@ public partial class MainViewModel : ViewModelBase
 
     public ObservableCollection<ProjectShellItem> Projects { get; } =
     [
-        new("Local backend", "Pair to load projects from orchestration.subscribeShell"),
+        new("placeholder-project", "Local backend", "Pair to load projects from orchestration.subscribeShell"),
     ];
 
     public ObservableCollection<ThreadShellItem> Threads { get; } =
     [
-        new("No thread selected", "Existing and new chats will appear here after shell sync."),
+        new("placeholder-thread", "No thread selected", "Existing and new chats will appear here after shell sync."),
     ];
 
     public ObservableCollection<ChatLineItem> ChatLines { get; } =
@@ -89,6 +92,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly NativeAuthClient _authClient = new(new HttpClient());
     private readonly T3BackendDiscoveryClient _discoveryClient = new(new HttpClient());
     private readonly ISecretStore _secretStore = new MemorySecretStore();
+    private ExistingWsRpcSession? _shellSession;
+    private IAsyncDisposable? _shellSubscription;
 
     [RelayCommand]
     private async Task ScanBackendsAsync()
@@ -155,10 +160,12 @@ public partial class MainViewModel : ViewModelBase
             var wsToken = await _authClient.IssueWebSocketTokenAsync(baseUri, auth.SessionToken);
             IsPaired = true;
             ServerName = baseUri.Authority;
-            Protocol = NativeAuthClient.BuildExistingWebSocketUri(baseUri, wsToken.Token).ToString();
+            var wsUri = NativeAuthClient.BuildExistingWebSocketUri(baseUri, wsToken.Token);
+            Protocol = wsUri.ToString();
             Status = baseUri.Scheme == Uri.UriSchemeHttp
                 ? "Paired over cleartext HTTP. Use only through VPN/private LAN."
                 : "Paired.";
+            await StartShellSubscriptionAsync(wsUri);
         }
         catch (Exception error)
         {
@@ -176,8 +183,115 @@ public partial class MainViewModel : ViewModelBase
 
         ChatLines.Add(new("you", ComposerText.Trim()));
         ComposerText = "";
-        Status = "Queued locally until orchestration.dispatchCommand is available on /native/ws.";
+        Status = "Queued locally until orchestration.dispatchCommand is wired through existing /ws.";
     }
+
+    private async Task StartShellSubscriptionAsync(Uri wsUri)
+    {
+        await StopShellSubscriptionAsync();
+
+        _shellSession = new ExistingWsRpcSession(new ClientWebSocketFactory());
+        await _shellSession.ConnectAsync(wsUri);
+        var shell = new NativeShellClient(_shellSession);
+        _shellSubscription = await shell.SubscribeShellAsync(update =>
+        {
+            Dispatcher.UIThread.Post(() => ApplyShellUpdate(update));
+            return Task.CompletedTask;
+        });
+        Status = "Paired. Syncing projects and threads from orchestration.subscribeShell...";
+    }
+
+    private async Task StopShellSubscriptionAsync()
+    {
+        if (_shellSubscription is not null)
+        {
+            await _shellSubscription.DisposeAsync();
+            _shellSubscription = null;
+        }
+
+        if (_shellSession is not null)
+        {
+            await _shellSession.DisposeAsync();
+            _shellSession = null;
+        }
+    }
+
+    private void ApplyShellUpdate(NativeShellUpdate update)
+    {
+        if (update.Snapshot is not null)
+        {
+            Projects.Clear();
+            foreach (var project in update.Snapshot.Projects)
+            {
+                Projects.Add(ToProjectItem(project));
+            }
+
+            Threads.Clear();
+            foreach (var thread in update.Snapshot.Threads)
+            {
+                Threads.Add(ToThreadItem(thread));
+            }
+
+            Status = $"Synced {Projects.Count} project(s) and {Threads.Count} thread(s).";
+            return;
+        }
+
+        if (update.Project is not null)
+        {
+            ReplaceProject(update.Project);
+        }
+
+        if (update.RemovedProjectId is not null)
+        {
+            RemoveProject(update.RemovedProjectId);
+        }
+
+        if (update.Thread is not null)
+        {
+            ReplaceThread(update.Thread);
+        }
+
+        if (update.RemovedThreadId is not null)
+        {
+            RemoveThread(update.RemovedThreadId);
+        }
+    }
+
+    private void ReplaceProject(NativeProjectShell project)
+    {
+        RemoveProject(project.Id);
+        Projects.Add(ToProjectItem(project));
+    }
+
+    private void RemoveProject(string projectId)
+    {
+        var existing = Projects.FirstOrDefault(project => project.Id == projectId);
+        if (existing is not null)
+        {
+            Projects.Remove(existing);
+        }
+    }
+
+    private void ReplaceThread(NativeThreadShell thread)
+    {
+        RemoveThread(thread.Id);
+        Threads.Add(ToThreadItem(thread));
+    }
+
+    private void RemoveThread(string threadId)
+    {
+        var existing = Threads.FirstOrDefault(thread => thread.Id == threadId);
+        if (existing is not null)
+        {
+            Threads.Remove(existing);
+        }
+    }
+
+    private static ProjectShellItem ToProjectItem(NativeProjectShell project) =>
+        new(project.Id, project.Title, project.WorkspaceRoot ?? "No workspace path");
+
+    private static ThreadShellItem ToThreadItem(NativeThreadShell thread) =>
+        new(thread.Id, thread.Title, thread.Detail);
 
     private static string ExtractPairingCredential(string input)
     {
@@ -209,8 +323,8 @@ public partial class MainViewModel : ViewModelBase
 
 public sealed record DiscoveredBackendItem(string BaseUrl, string Source, string Status);
 
-public sealed record ProjectShellItem(string Title, string Detail);
+public sealed record ProjectShellItem(string Id, string Title, string Detail);
 
-public sealed record ThreadShellItem(string Title, string Detail);
+public sealed record ThreadShellItem(string Id, string Title, string Detail);
 
 public sealed record ChatLineItem(string Speaker, string Text);
