@@ -76,8 +76,8 @@ Purpose: make the reusable native client robust enough for mobile sleep/VPN tran
 
 - [x] Add reconnect replay and subscription cancellation tests. Evidence: `NativeRpcSessionTests.cs` covers replay after reconnect and non-replay after cancellation.
 - [x] Add sequence-ordering helper tests. Evidence: `SequenceGateTests.cs` covers increasing sequence behavior.
-- [ ] Add command outbox persistence abstraction.
-      Acceptance: retryable commands survive process restart in tests through an interface that can later be backed by platform storage.
+- [x] Add command outbox persistence abstraction.
+      Evidence: `NativeCommandOutbox` persists retryable command records through `INativeCommandOutboxStore`; `JsonFileNativeCommandOutboxStore` proves restart survival without platform coupling, and `MemoryNativeCommandOutboxStore` keeps tests/spikes lightweight. `NativeCommandOutboxTests` covers enqueue, restart load, replay attempt increment, completion removal, and command-id upsert semantics.
 - [ ] Add ws-token refresh/reconnect flow.
       Acceptance: expired ws-token errors trigger bearer-token ws-token renewal once, retry only retryable operations, and surface final auth denial clearly.
 - [ ] Add bounded backoff and network-state reporting.
