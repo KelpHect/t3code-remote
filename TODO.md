@@ -68,7 +68,11 @@ docs.
       history, settings/connection, model/mode sheet, and one tool sheet show no
       clipped text, overlapped controls, wide tabs, setup-first empty state, or
       desktop dashboard layout.
-- [ ] Keep an Ionic component reference note in `apps/mobile/README.md`.
+- [x] Keep an Ionic component reference note in `apps/mobile/README.md`.
+      Evidence: `apps/mobile/README.md` includes an Ionic UI Contract section
+      naming the page shell, drawer/history, composer, tool sheet/modal,
+      settings/list, and theming components plus official Ionic Vue,
+      navigation, component, CSS variable, and dark-mode references.
       Acceptance: README names the Ionic components used for page structure,
       drawer, sheets/modals, lists, composer, and theming, with links to the
       official Ionic Vue/navigation/components/theming docs.
