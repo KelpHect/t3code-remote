@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -15,6 +16,7 @@ using T3Code.Native.Client.Discovery;
 using T3Code.Native.Client.Shell;
 using T3Code.Native.Client.Thread;
 using T3Code.Native.Client.Transport;
+using T3Code.Native.Client.Workspace;
 
 namespace T3Code.Native.App.ViewModels;
 
@@ -72,6 +74,8 @@ public partial class MainViewModel : ViewModelBase
         "Select a project and refresh git status.",
     ];
 
+    public ObservableCollection<WorkspaceEntryItem> WorkspaceEntries { get; } = [];
+
     public ObservableCollection<ModelSelectionItem> Models { get; } =
     [
         new("Codex / GPT-5.5", "codex", "gpt-5.5"),
@@ -119,6 +123,24 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _gitCommitMessage = "";
+
+    [ObservableProperty]
+    private string _browsePath = "";
+
+    [ObservableProperty]
+    private string _workspaceStatus = "Browse desktop files or clone a repository.";
+
+    [ObservableProperty]
+    private string _projectTitle = "";
+
+    [ObservableProperty]
+    private string _projectWorkspacePath = "";
+
+    [ObservableProperty]
+    private string _cloneRemoteUrl = "";
+
+    [ObservableProperty]
+    private string _cloneDestinationPath = "";
 
     private readonly NativeAuthClient _authClient = new(new HttpClient());
     private readonly T3BackendDiscoveryClient _discoveryClient = new(new HttpClient());
@@ -340,6 +362,97 @@ public partial class MainViewModel : ViewModelBase
         {
             GitStatusText = error.Message;
             GitLogLines.Add(error.Message);
+        }
+    }
+
+    [RelayCommand]
+    private async Task BrowseWorkspaceAsync()
+    {
+        if (_shellSession is null)
+        {
+            WorkspaceStatus = "Pair with a backend first.";
+            return;
+        }
+
+        try
+        {
+            WorkspaceStatus = "Browsing...";
+            var result = await new NativeWorkspaceClient(_shellSession, _commandOutbox)
+                .BrowseAsync(string.IsNullOrWhiteSpace(BrowsePath) ? "." : BrowsePath.Trim());
+            WorkspaceEntries.Clear();
+            foreach (var entry in result.Entries)
+            {
+                WorkspaceEntries.Add(new WorkspaceEntryItem(entry.Name, entry.FullPath));
+            }
+
+            WorkspaceStatus = $"Loaded {WorkspaceEntries.Count} entries from {result.ParentPath}.";
+        }
+        catch (Exception error)
+        {
+            WorkspaceStatus = error.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CreateProjectAsync()
+    {
+        if (_shellSession is null)
+        {
+            WorkspaceStatus = "Pair with a backend first.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(ProjectTitle) || string.IsNullOrWhiteSpace(ProjectWorkspacePath))
+        {
+            WorkspaceStatus = "Enter a project title and workspace path.";
+            return;
+        }
+
+        try
+        {
+            var projectId = await new NativeWorkspaceClient(_shellSession, _commandOutbox)
+                .CreateProjectAsync(
+                    ProjectTitle.Trim(),
+                    ProjectWorkspacePath.Trim(),
+                    BuildSelectedModelSelection()
+                );
+            WorkspaceStatus = $"Project created: {projectId}";
+        }
+        catch (Exception error)
+        {
+            WorkspaceStatus = error.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CloneRepositoryAsync()
+    {
+        if (_shellSession is null)
+        {
+            WorkspaceStatus = "Pair with a backend first.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(CloneRemoteUrl) || string.IsNullOrWhiteSpace(CloneDestinationPath))
+        {
+            WorkspaceStatus = "Enter a repository URL and destination path.";
+            return;
+        }
+
+        try
+        {
+            WorkspaceStatus = "Cloning repository...";
+            var client = new NativeWorkspaceClient(_shellSession, _commandOutbox);
+            var clone = await client.CloneRepositoryAsync(CloneRemoteUrl.Trim(), CloneDestinationPath.Trim());
+            var title = clone.RepositoryName ?? Path.GetFileName(clone.Cwd.TrimEnd(Path.DirectorySeparatorChar));
+            await client.CreateProjectAsync(title, clone.Cwd, BuildSelectedModelSelection());
+            ProjectTitle = title;
+            ProjectWorkspacePath = clone.Cwd;
+            WorkspaceStatus = $"Cloned and added project: {clone.Cwd}";
+        }
+        catch (Exception error)
+        {
+            WorkspaceStatus = error.Message;
         }
     }
 
@@ -694,6 +807,8 @@ public sealed record ProjectShellItem(string Id, string Title, string Detail);
 public sealed record ThreadShellItem(string Id, string Title, string Detail);
 
 public sealed record ModelSelectionItem(string Label, string InstanceId, string Model);
+
+public sealed record WorkspaceEntryItem(string Name, string FullPath);
 
 public sealed record ChatLineItem(
     string Speaker,
