@@ -131,6 +131,16 @@ http://10.0.2.2:3773
 
 For a real phone over WiFiman Teleport/VPN, use the desktop's VPN/LAN address shown by T3 remote pairing.
 
+## Android Artifact Strategy
+
+The native Android artifact and signing rules live in `apps/native-avalonia/docs/android-release.md`.
+
+- Debug APK: `apps/native-avalonia/T3Code.Native.App.Android/bin/Debug/net10.0-android/publish/codes.t3.nativeapp-Signed.apk`.
+- Release APK/AAB output directory: `apps/native-avalonia/T3Code.Native.App.Android/bin/Release/net10.0-android/publish/`.
+- Release signing inputs: `T3_ANDROID_KEYSTORE`, `T3_ANDROID_KEYSTORE_PASSWORD`, `T3_ANDROID_KEY_ALIAS`, and `T3_ANDROID_KEY_PASSWORD`.
+- Release package format: use `-p:AndroidPackageFormat=apk` for sideload APKs and `-p:AndroidPackageFormat=aab` for store upload bundles.
+- Artifact retention: generated APK/AAB files stay out of source control and are copied from the native release output directory into the release system when a native release pipeline exists.
+
 ## Stack Decision
 
 Primary: Avalonia 12 / .NET 10.

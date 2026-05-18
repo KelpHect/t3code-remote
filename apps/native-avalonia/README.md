@@ -73,4 +73,6 @@ dotnet publish apps/native-avalonia/T3Code.Native.App.Android/T3Code.Native.App.
 
 Use `-p:AndroidPackageFormat=apk` for a sideloadable release APK or `-p:AndroidPackageFormat=aab` for store upload. Release artifacts stay under `apps/native-avalonia/T3Code.Native.App.Android/bin/Release/net10.0-android/publish/` until a separate native release pipeline is added.
 
+See `docs/android-release.md` for the full artifact, signing, versioning, and retention rules.
+
 iOS is scaffolded but still requires a macOS/Xcode/signing validation path.
