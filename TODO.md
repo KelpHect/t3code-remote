@@ -93,8 +93,8 @@ Purpose: turn the scaffold into a useful mobile client once protocol access exis
 
 - [x] Replace placeholder project/thread lists with `orchestration.subscribeShell`.
       Evidence: completed during P1 in `NativeShellClient` and `MainViewModel`: after pairing, the app opens the existing backend `/ws`, subscribes to `orchestration.subscribeShell`, maps snapshots/events into app-owned DTOs, and replaces placeholder projects/threads. `NativeShellClientTests` covers snapshot/removal mapping, and live validation against the desktop backend received real project/thread counts. Remaining ordering/sequence hardening is handled by the native `SequenceGate` and later UI-specific refinements, not placeholder data.
-- [ ] Implement thread subscription and chat rendering.
-      Acceptance: existing Codex thread loads, long chat scroll remains responsive, approvals/user input render distinctly, and session restart/reconnect does not duplicate messages.
+- [x] Implement thread subscription and chat rendering.
+      Evidence: `NativeThreadClient` subscribes to `orchestration.subscribeThread` over the existing backend `/ws`, maps thread snapshots/events into app-owned thread DTOs, and `NativeThreadState` applies only increasing sequences while deduplicating entries by id. `MainViewModel` subscribes when a thread is selected and renders messages/activities in the Chat tab; approval and user-input-style activities use a distinct action tone. `MainView.axaml` uses a virtualized `ListBox` for chat entries instead of an unbounded `ItemsControl` inside a `ScrollViewer`. `NativeThreadClientTests` covers snapshot mapping, action activity rendering, stale event rejection, and duplicate message replacement.
 - [ ] Implement send/continue/stop commands with client-generated command IDs.
       Acceptance: duplicate retry sends the same command ID and backend dedupe prevents duplicate turns.
 - [ ] Wire model, runtime mode, and interaction mode controls to backend contracts.

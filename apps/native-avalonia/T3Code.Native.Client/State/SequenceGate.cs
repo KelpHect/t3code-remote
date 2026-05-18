@@ -4,7 +4,7 @@ public sealed record SequencedValue<T>(long Sequence, T Value);
 
 public sealed class SequenceGate<T>
 {
-    private long _lastSequence;
+    private long _lastSequence = -1;
 
     public long LastSequence => _lastSequence;
 

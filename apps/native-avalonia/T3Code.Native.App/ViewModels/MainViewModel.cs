@@ -9,6 +9,7 @@ using Avalonia.Threading;
 using T3Code.Native.Client.Auth;
 using T3Code.Native.Client.Discovery;
 using T3Code.Native.Client.Shell;
+using T3Code.Native.Client.Thread;
 using T3Code.Native.Client.Transport;
 
 namespace T3Code.Native.App.ViewModels;
@@ -38,6 +39,9 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     private DiscoveredBackendItem? _selectedBackend;
+
+    [ObservableProperty]
+    private ThreadShellItem? _selectedThread;
 
     public ObservableCollection<DiscoveredBackendItem> DiscoveredBackends { get; } = [];
 
@@ -94,6 +98,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly ISecretStore _secretStore = NativeAppServices.SecretStore;
     private ExistingWsRpcSession? _shellSession;
     private IAsyncDisposable? _shellSubscription;
+    private IAsyncDisposable? _threadSubscription;
+    private NativeThreadState _threadState = new();
 
     [RelayCommand]
     private async Task ScanBackendsAsync()
@@ -184,6 +190,34 @@ public partial class MainViewModel : ViewModelBase
         Status = "Queued locally until orchestration.dispatchCommand is wired through existing /ws.";
     }
 
+    private async Task LoadThreadAsync(ThreadShellItem thread)
+    {
+        if (_shellSession is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await StopThreadSubscriptionAsync();
+            _threadState = new NativeThreadState();
+            ChatLines.Clear();
+            ChatLines.Add(new("system", $"Loading {thread.Title}...", "#15171c", "#2a2f3a", "#8c95a4"));
+
+            var client = new NativeThreadClient(_shellSession);
+            _threadSubscription = await client.SubscribeThreadAsync(thread.Id, update =>
+            {
+                Dispatcher.UIThread.Post(() => ApplyThreadUpdate(update));
+                return Task.CompletedTask;
+            });
+            Status = $"Loading thread {thread.Title}.";
+        }
+        catch (Exception error)
+        {
+            Status = error.Message;
+        }
+    }
+
     private async Task StartShellSubscriptionAsync(Uri baseUri)
     {
         await StopShellSubscriptionAsync();
@@ -205,6 +239,8 @@ public partial class MainViewModel : ViewModelBase
 
     private async Task StopShellSubscriptionAsync()
     {
+        await StopThreadSubscriptionAsync();
+
         if (_shellSubscription is not null)
         {
             await _shellSubscription.DisposeAsync();
@@ -215,6 +251,15 @@ public partial class MainViewModel : ViewModelBase
         {
             await _shellSession.DisposeAsync();
             _shellSession = null;
+        }
+    }
+
+    private async Task StopThreadSubscriptionAsync()
+    {
+        if (_threadSubscription is not null)
+        {
+            await _threadSubscription.DisposeAsync();
+            _threadSubscription = null;
         }
     }
 
@@ -234,6 +279,7 @@ public partial class MainViewModel : ViewModelBase
                 Threads.Add(ToThreadItem(thread));
             }
 
+            SelectedThread = Threads.FirstOrDefault();
             Status = $"Synced {Projects.Count} project(s) and {Threads.Count} thread(s).";
             return;
         }
@@ -295,6 +341,40 @@ public partial class MainViewModel : ViewModelBase
     private static ThreadShellItem ToThreadItem(NativeThreadShell thread) =>
         new(thread.Id, thread.Title, thread.Detail);
 
+    private void ApplyThreadUpdate(NativeThreadUpdate update)
+    {
+        if (!_threadState.Apply(update))
+        {
+            return;
+        }
+
+        ChatLines.Clear();
+        foreach (var entry in _threadState.Entries)
+        {
+            ChatLines.Add(ToChatLine(entry));
+        }
+
+        if (ChatLines.Count == 0)
+        {
+            ChatLines.Add(new("system", "No messages in this thread yet.", "#15171c", "#2a2f3a", "#8c95a4"));
+        }
+
+        Status = string.IsNullOrWhiteSpace(_threadState.SessionStatus)
+            ? $"Loaded {_threadState.Title}."
+            : $"{_threadState.Title} - {_threadState.SessionStatus}.";
+    }
+
+    private static ChatLineItem ToChatLine(NativeThreadEntry entry) =>
+        entry.Tone switch
+        {
+            "user" => new ChatLineItem(entry.Speaker, entry.Text, "#102039", "#2563eb", "#93c5fd"),
+            "assistant" => new ChatLineItem(entry.Speaker, entry.Text, "#16191f", "#2a2f3a", "#aab2c0"),
+            "action" => new ChatLineItem(entry.Speaker, entry.Text, "#1f2638", "#3b82f6", "#93c5fd"),
+            "error" => new ChatLineItem(entry.Speaker, entry.Text, "#2a1618", "#ef4444", "#fca5a5"),
+            "tool" => new ChatLineItem(entry.Speaker, entry.Text, "#171b22", "#475569", "#cbd5e1"),
+            _ => new ChatLineItem(entry.Speaker, entry.Text),
+        };
+
     private static string ExtractPairingCredential(string input)
     {
         var trimmed = input.Trim();
@@ -321,6 +401,14 @@ public partial class MainViewModel : ViewModelBase
             BaseUrl = value.BaseUrl;
         }
     }
+
+    partial void OnSelectedThreadChanged(ThreadShellItem? value)
+    {
+        if (value is not null)
+        {
+            _ = LoadThreadAsync(value);
+        }
+    }
 }
 
 public sealed record DiscoveredBackendItem(string BaseUrl, string Source, string Status);
@@ -329,4 +417,10 @@ public sealed record ProjectShellItem(string Id, string Title, string Detail);
 
 public sealed record ThreadShellItem(string Id, string Title, string Detail);
 
-public sealed record ChatLineItem(string Speaker, string Text);
+public sealed record ChatLineItem(
+    string Speaker,
+    string Text,
+    string Background = "#1b1f27",
+    string BorderBrush = "#2a2f3a",
+    string SpeakerForeground = "#aab2c0"
+);

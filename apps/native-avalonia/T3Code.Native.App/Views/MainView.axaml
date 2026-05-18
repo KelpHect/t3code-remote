@@ -73,7 +73,11 @@
               <ComboBox ItemsSource="{Binding RuntimeModes}" SelectedItem="{Binding SelectedRuntimeMode}" HorizontalAlignment="Stretch" />
               <ComboBox ItemsSource="{Binding InteractionModes}" SelectedItem="{Binding SelectedInteractionMode}" HorizontalAlignment="Stretch" />
             </StackPanel>
-            <ListBox Grid.Row="2" ItemsSource="{Binding Threads}" Background="Transparent" BorderThickness="0">
+            <ListBox Grid.Row="2"
+                     ItemsSource="{Binding Threads}"
+                     SelectedItem="{Binding SelectedThread}"
+                     Background="Transparent"
+                     BorderThickness="0">
             <ListBox.ItemTemplate>
               <DataTemplate DataType="vm:ThreadShellItem">
                 <StackPanel Margin="0,4" Spacing="2">
@@ -91,20 +95,27 @@
         <Border Background="#101114" Padding="16">
         <Grid RowDefinitions="Auto,*,Auto">
           <TextBlock Text="Chat" Foreground="#f2f5f9" FontSize="20" FontWeight="SemiBold" />
-          <ScrollViewer Grid.Row="1" Margin="0,12">
-            <ItemsControl ItemsSource="{Binding ChatLines}">
-              <ItemsControl.ItemTemplate>
+          <ListBox Grid.Row="1"
+                   Margin="0,12"
+                   ItemsSource="{Binding ChatLines}"
+                   Background="Transparent"
+                   BorderThickness="0">
+            <ListBox.ItemTemplate>
                 <DataTemplate DataType="vm:ChatLineItem">
-                  <Border Background="#1b1f27" BorderBrush="#2a2f3a" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                  <Border Background="{Binding Background}"
+                          BorderBrush="{Binding BorderBrush}"
+                          BorderThickness="1"
+                          CornerRadius="6"
+                          Padding="10"
+                          Margin="0,0,0,8">
                     <StackPanel Spacing="4">
-                      <TextBlock Text="{Binding Speaker}" Foreground="#aab2c0" FontSize="12" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding Speaker}" Foreground="{Binding SpeakerForeground}" FontSize="12" FontWeight="SemiBold" />
                       <TextBlock Text="{Binding Text}" Foreground="#f2f5f9" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
+            </ListBox.ItemTemplate>
+          </ListBox>
             <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
             <TextBox Text="{Binding ComposerText}" PlaceholderText="Send a turn" MinHeight="44" AcceptsReturn="True" />
               <Button Grid.Column="1" Command="{Binding QueueComposerCommand}" Content="Send" MinWidth="76" />
