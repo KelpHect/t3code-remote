@@ -78,8 +78,8 @@ Purpose: make the reusable native client robust enough for mobile sleep/VPN tran
 - [x] Add sequence-ordering helper tests. Evidence: `SequenceGateTests.cs` covers increasing sequence behavior.
 - [x] Add command outbox persistence abstraction.
       Evidence: `NativeCommandOutbox` persists retryable command records through `INativeCommandOutboxStore`; `JsonFileNativeCommandOutboxStore` proves restart survival without platform coupling, and `MemoryNativeCommandOutboxStore` keeps tests/spikes lightweight. `NativeCommandOutboxTests` covers enqueue, restart load, replay attempt increment, completion removal, and command-id upsert semantics.
-- [ ] Add ws-token refresh/reconnect flow.
-      Acceptance: expired ws-token errors trigger bearer-token ws-token renewal once, retry only retryable operations, and surface final auth denial clearly.
+- [x] Add ws-token refresh/reconnect flow.
+      Evidence: `RefreshingExistingWsRpcSession` issues short-lived `/ws` URLs through `IExistingWsUriProvider`, retries authentication failures once with a fresh token, reconnects through `ExistingWsRpcSession.ReconnectAsync(Uri, ...)`, and lets the existing replay filter resend only active operations. `BearerTokenExistingWsUriProvider` renews ws-tokens from the stored bearer token. `RefreshingExistingWsRpcSessionTests` covers expired-token reconnect, active request replay, canceled subscription non-replay, and final auth denial through `ExistingWsAuthenticationException`.
 - [ ] Add bounded backoff and network-state reporting.
       Acceptance: tests cover transient disconnect, repeated failure, cancellation, and UI-visible state transitions.
 - [ ] Replace in-memory production token storage with platform secure storage.

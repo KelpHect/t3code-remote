@@ -157,15 +157,13 @@ public partial class MainViewModel : ViewModelBase
             var credential = ExtractPairingCredential(PairingToken);
             var auth = await _authClient.ExchangePairingTokenAsync(baseUri, credential);
             await _secretStore.SaveBearerTokenAsync(baseUri, auth.SessionToken);
-            var wsToken = await _authClient.IssueWebSocketTokenAsync(baseUri, auth.SessionToken);
             IsPaired = true;
             ServerName = baseUri.Authority;
-            var wsUri = NativeAuthClient.BuildExistingWebSocketUri(baseUri, wsToken.Token);
-            Protocol = wsUri.ToString();
+            Protocol = "Existing /ws with short-lived ws-token refresh";
             Status = baseUri.Scheme == Uri.UriSchemeHttp
                 ? "Paired over cleartext HTTP. Use only through VPN/private LAN."
                 : "Paired.";
-            await StartShellSubscriptionAsync(wsUri);
+            await StartShellSubscriptionAsync(baseUri);
         }
         catch (Exception error)
         {
@@ -186,12 +184,16 @@ public partial class MainViewModel : ViewModelBase
         Status = "Queued locally until orchestration.dispatchCommand is wired through existing /ws.";
     }
 
-    private async Task StartShellSubscriptionAsync(Uri wsUri)
+    private async Task StartShellSubscriptionAsync(Uri baseUri)
     {
         await StopShellSubscriptionAsync();
 
         _shellSession = new ExistingWsRpcSession(new ClientWebSocketFactory());
-        await _shellSession.ConnectAsync(wsUri);
+        var refreshingSession = new RefreshingExistingWsRpcSession(
+            _shellSession,
+            new BearerTokenExistingWsUriProvider(_authClient, _secretStore, baseUri)
+        );
+        await refreshingSession.ConnectAsync();
         var shell = new NativeShellClient(_shellSession);
         _shellSubscription = await shell.SubscribeShellAsync(update =>
         {

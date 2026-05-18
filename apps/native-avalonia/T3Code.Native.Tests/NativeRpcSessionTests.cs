@@ -85,7 +85,7 @@ internal sealed class FakeSocketFactory : INativeWebSocketFactory
     }
 }
 
-internal sealed class FakeNativeWebSocket : INativeWebSocket
+internal class FakeNativeWebSocket : INativeWebSocket
 {
     private readonly Channel<string> _incoming = Channel.CreateUnbounded<string>();
 

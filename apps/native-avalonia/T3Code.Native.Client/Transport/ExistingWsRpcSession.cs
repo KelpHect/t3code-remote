@@ -43,6 +43,12 @@ public sealed class ExistingWsRpcSession(INativeWebSocketFactory socketFactory) 
         }
     }
 
+    public async Task ReconnectAsync(Uri uri, CancellationToken cancellationToken = default)
+    {
+        _uri = uri;
+        await ReconnectAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<T?> RequestAsync<T>(
         string method,
         object? payload = null,
