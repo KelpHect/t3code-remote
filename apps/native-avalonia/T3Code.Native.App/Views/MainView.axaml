@@ -131,6 +131,30 @@
         </Grid>
       </Border>
       </TabItem>
+
+      <TabItem Header="Diff" Foreground="#f2f5f9">
+        <Border Background="#101114" Padding="16">
+          <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
+            <Grid ColumnDefinitions="*,*,Auto,Auto" ColumnSpacing="8">
+              <TextBox Text="{Binding DiffFromTurn}" PlaceholderText="From" />
+              <TextBox Grid.Column="1" Text="{Binding DiffToTurn}" PlaceholderText="To" />
+              <Button Grid.Column="2" Command="{Binding LoadTurnDiffCommand}" Content="Turn" MinWidth="72" />
+              <Button Grid.Column="3" Command="{Binding LoadFullThreadDiffCommand}" Content="Full" MinWidth="72" />
+            </Grid>
+            <TextBlock Grid.Row="1" Text="{Binding DiffStatus}" Foreground="#aab2c0" TextWrapping="Wrap" />
+            <Border Grid.Row="2" Background="#0d0f12" BorderBrush="#2a2f3a" BorderThickness="1">
+              <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <TextBlock Text="{Binding DiffText}"
+                           TextWrapping="NoWrap"
+                           FontFamily="Consolas, Menlo, monospace"
+                           FontSize="12"
+                           Foreground="#e5e7eb"
+                           Padding="10" />
+              </ScrollViewer>
+            </Border>
+          </Grid>
+        </Border>
+      </TabItem>
     </TabControl>
 
     <Border Grid.Row="2" Background="#17191f" BorderBrush="#2a2f3a" BorderThickness="0,1,0,0" Padding="12,8">

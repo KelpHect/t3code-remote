@@ -102,8 +102,8 @@ Purpose: turn the scaffold into a useful mobile client once protocol access exis
 
 ### Work Surfaces
 
-- [ ] Add unified diff viewer.
-      Acceptance: turn diff and full-thread diff load, large diffs remain scrollable, binary/empty diff states are explicit.
+- [x] Add unified diff viewer.
+      Evidence: `NativeDiffClient` calls existing backend `orchestration.getTurnDiff` and `orchestration.getFullThreadDiff`, maps unified patch results into `NativeDiffResult`, and classifies ready/empty/binary states. `MainView.axaml` adds a Diff tab with turn-range inputs, turn/full-load buttons, explicit status text, and a read-only monospace text box with horizontal/vertical scrolling for large patches. `NativeDiffClientTests` covers request payloads, patch mapping, and empty/binary state classification.
 - [ ] Add git status and action progress UI.
       Acceptance: commit, push, commit+push, and PR prep show progress logs through capabilities already available to the existing desktop/web app; any missing progress stream is handled in the native UX as a compatibility limitation, not as a backend change request.
 - [ ] Add filesystem browse and clone/project creation.

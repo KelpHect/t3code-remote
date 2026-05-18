@@ -9,6 +9,7 @@ using Avalonia.Threading;
 using T3Code.Native.Client.Auth;
 using T3Code.Native.Client.Commands;
 using T3Code.Native.Client.Config;
+using T3Code.Native.Client.Diff;
 using T3Code.Native.Client.Discovery;
 using T3Code.Native.Client.Shell;
 using T3Code.Native.Client.Thread;
@@ -91,6 +92,18 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _composerText = "";
+
+    [ObservableProperty]
+    private string _diffFromTurn = "0";
+
+    [ObservableProperty]
+    private string _diffToTurn = "1";
+
+    [ObservableProperty]
+    private string _diffText = "";
+
+    [ObservableProperty]
+    private string _diffStatus = "Select a thread and load a diff.";
 
     private readonly NativeAuthClient _authClient = new(new HttpClient());
     private readonly T3BackendDiscoveryClient _discoveryClient = new(new HttpClient());
@@ -213,6 +226,90 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private async Task StopThreadAsync() =>
         await DispatchThreadCommandAsync(client => client.InterruptTurnAsync(SelectedThread!.Id));
+
+    [RelayCommand]
+    private async Task LoadTurnDiffAsync()
+    {
+        if (!TryReadDiffInputs(out var fromTurn, out var toTurn))
+        {
+            return;
+        }
+
+        await LoadDiffAsync(client => client.GetTurnDiffAsync(SelectedThread!.Id, fromTurn, toTurn));
+    }
+
+    [RelayCommand]
+    private async Task LoadFullThreadDiffAsync()
+    {
+        if (!TryReadDiffInputs(out _, out var toTurn))
+        {
+            return;
+        }
+
+        await LoadDiffAsync(client => client.GetFullThreadDiffAsync(SelectedThread!.Id, toTurn));
+    }
+
+    private async Task LoadDiffAsync(Func<NativeDiffClient, Task<NativeDiffResult>> load)
+    {
+        if (_shellSession is null || SelectedThread is null)
+        {
+            DiffStatus = "Select a synced thread first.";
+            return;
+        }
+
+        try
+        {
+            DiffStatus = "Loading diff...";
+            var result = await load(new NativeDiffClient(_shellSession));
+            DiffText = result.State switch
+            {
+                NativeDiffState.Empty => "",
+                NativeDiffState.Binary => result.Diff,
+                _ => result.Diff,
+            };
+            DiffStatus = result.State switch
+            {
+                NativeDiffState.Empty => "No changes in this range.",
+                NativeDiffState.Binary => "Binary diff. Text patch may be unavailable.",
+                _ => $"Loaded turn diff {result.FromTurnCount} -> {result.ToTurnCount}.",
+            };
+        }
+        catch (Exception error)
+        {
+            DiffStatus = error.Message;
+        }
+    }
+
+    private bool TryReadDiffInputs(out int fromTurn, out int toTurn)
+    {
+        fromTurn = 0;
+        toTurn = 0;
+        if (SelectedThread is null)
+        {
+            DiffStatus = "Select a synced thread first.";
+            return false;
+        }
+
+        if (!int.TryParse(DiffFromTurn, out fromTurn) || fromTurn < 0)
+        {
+            DiffStatus = "From turn must be zero or greater.";
+            return false;
+        }
+
+        if (!int.TryParse(DiffToTurn, out toTurn) || toTurn < 0)
+        {
+            DiffStatus = "To turn must be zero or greater.";
+            return false;
+        }
+
+        if (fromTurn > toTurn)
+        {
+            DiffStatus = "From turn must be less than or equal to to turn.";
+            return false;
+        }
+
+        return true;
+    }
 
     private async Task DispatchThreadCommandAsync(
         Func<NativeThreadCommandClient, Task<string>> dispatch
