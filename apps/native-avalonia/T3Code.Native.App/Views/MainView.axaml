@@ -1,0 +1,105 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:T3Code.Native.App.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1120" d:DesignHeight="760"
+             x:Class="T3Code.Native.App.Views.MainView"
+             x:DataType="vm:MainViewModel">
+  <Design.DataContext>
+    <!-- This only sets the DataContext for the previewer in an IDE,
+         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+    <vm:MainViewModel />
+  </Design.DataContext>
+
+  <Grid RowDefinitions="Auto,*,Auto" Background="#101114">
+    <Border Grid.Row="0" Background="#17191f" BorderBrush="#2a2f3a" BorderThickness="0,0,0,1" Padding="16,12">
+      <StackPanel Spacing="8">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <TextBox Grid.Column="0"
+                   Text="{Binding BaseUrl}"
+                   PlaceholderText="http://vpn-or-lan-ip:3773" />
+          <Button Grid.Column="1"
+                  Command="{Binding PairCommand}"
+                  Content="Pair"
+                  MinWidth="76" />
+        </Grid>
+        <TextBox Text="{Binding PairingToken}"
+                 PlaceholderText="Pairing token or URL" />
+        <StackPanel Spacing="2">
+          <TextBlock Text="{Binding ServerName}" Foreground="#f2f5f9" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Protocol}" Foreground="#aab2c0" FontSize="12" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <TabControl Grid.Row="1" Background="#101114">
+      <TabItem Header="Projects" Foreground="#f2f5f9">
+        <Border Background="#15171c" Padding="12">
+          <ListBox ItemsSource="{Binding Projects}" Background="Transparent" BorderThickness="0">
+            <ListBox.ItemTemplate>
+              <DataTemplate DataType="vm:ProjectShellItem">
+                <StackPanel Margin="0,4" Spacing="2">
+                  <TextBlock Text="{Binding Title}" Foreground="#f2f5f9" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding Detail}" Foreground="#8c95a4" FontSize="12" TextWrapping="Wrap" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Border>
+      </TabItem>
+
+      <TabItem Header="Threads" Foreground="#f2f5f9">
+        <Border Background="#181b21" Padding="12">
+        <Grid RowDefinitions="Auto,Auto,*">
+            <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,12">
+              <ComboBox ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" HorizontalAlignment="Stretch" />
+              <ComboBox ItemsSource="{Binding RuntimeModes}" SelectedItem="{Binding SelectedRuntimeMode}" HorizontalAlignment="Stretch" />
+              <ComboBox ItemsSource="{Binding InteractionModes}" SelectedItem="{Binding SelectedInteractionMode}" HorizontalAlignment="Stretch" />
+            </StackPanel>
+            <ListBox Grid.Row="2" ItemsSource="{Binding Threads}" Background="Transparent" BorderThickness="0">
+            <ListBox.ItemTemplate>
+              <DataTemplate DataType="vm:ThreadShellItem">
+                <StackPanel Margin="0,4" Spacing="2">
+                  <TextBlock Text="{Binding Title}" Foreground="#f2f5f9" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding Detail}" Foreground="#8c95a4" FontSize="12" TextWrapping="Wrap" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+        </Border>
+      </TabItem>
+
+      <TabItem Header="Chat" Foreground="#f2f5f9">
+        <Border Background="#101114" Padding="16">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <TextBlock Text="Chat" Foreground="#f2f5f9" FontSize="20" FontWeight="SemiBold" />
+          <ScrollViewer Grid.Row="1" Margin="0,12">
+            <ItemsControl ItemsSource="{Binding ChatLines}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="vm:ChatLineItem">
+                  <Border Background="#1b1f27" BorderBrush="#2a2f3a" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="{Binding Speaker}" Foreground="#aab2c0" FontSize="12" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding Text}" Foreground="#f2f5f9" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+            <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox Text="{Binding ComposerText}" PlaceholderText="Send a turn" MinHeight="44" AcceptsReturn="True" />
+              <Button Grid.Column="1" Command="{Binding QueueComposerCommand}" Content="Send" MinWidth="76" />
+          </Grid>
+        </Grid>
+      </Border>
+      </TabItem>
+    </TabControl>
+
+    <Border Grid.Row="2" Background="#17191f" BorderBrush="#2a2f3a" BorderThickness="0,1,0,0" Padding="12,8">
+      <TextBlock Text="{Binding Status}" Foreground="#aab2c0" TextWrapping="Wrap" />
+    </Border>
+  </Grid>
+</UserControl>
