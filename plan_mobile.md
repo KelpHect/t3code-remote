@@ -251,6 +251,10 @@ Fixture drift tests now replay the captured `/ws` frames through the native
 transport and shell mapper so changes to Effect RPC envelope shape fail in the
 native test suite before they reach UI code.
 
+Backend shell data is mapped into app-owned DTOs in
+`T3Code.Native.Client.Shell`; Avalonia view models consume those DTOs and UI
+records, not Effect RPC frames.
+
 ## Native App Shape
 
 Current projects:

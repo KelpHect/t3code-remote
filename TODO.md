@@ -64,7 +64,8 @@ Purpose: unblock real chat/project/git/terminal behavior against an unmodified o
 - [x] Add drift tests for the compatibility transport.
       Evidence: `ExistingWsFixtureDriftTests` copies the redacted `/ws` fixtures into test output, checks required method coverage and secret redaction, replays unary success frames through `ExistingWsRpcSession`, replays shell subscription chunks through `NativeShellClient`, and replays failure exits through `ExistingWsRpcException`. Failures name the impacted fixture frame.
       Acceptance: tests replay captured fixtures and fail narrowly when original-backend wire shapes change; failures identify the impacted method or envelope.
-- [ ] Map existing backend data into app-owned native DTOs.
+- [x] Map existing backend data into app-owned native DTOs.
+      Evidence: `NativeShellMapper` converts existing-backend shell snapshots and events from `JsonElement` into app-owned `NativeShellSnapshot`, `NativeProjectShell`, `NativeThreadShell`, and `NativeShellUpdate` records inside `T3Code.Native.Client.Shell`. `MainViewModel` consumes those DTOs and converts them to Avalonia UI records; it does not parse Effect RPC `Request`/`Exit`/`Chunk` frames or backend JSON payloads directly. `NativeShellClientTests` and `ExistingWsFixtureDriftTests` cover DTO mapping from fixture/current-wire shapes.
       Acceptance: UI/view models consume app-owned DTOs only; no view model, persistence type, or screen references the existing backend wire format or helper-runtime protocol directly.
 
 ## P2 - Native Client Reliability
