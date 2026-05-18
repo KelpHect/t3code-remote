@@ -87,9 +87,8 @@ describe("mobile backend discovery", () => {
 
   test("does not treat Capacitor Android cleartext as browser mixed content", () => {
     const [candidate] = androidCandidates();
-    const originalCapacitor = (
-      window as Window & { Capacitor?: { getPlatform?: () => string } }
-    ).Capacitor;
+    const originalCapacitor = (window as Window & { Capacitor?: { getPlatform?: () => string } })
+      .Capacitor;
     const originalSecureContext = window.isSecureContext;
 
     Object.defineProperty(window, "Capacitor", {
