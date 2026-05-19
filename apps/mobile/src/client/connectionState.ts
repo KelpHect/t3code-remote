@@ -7,6 +7,11 @@ import {
   probeBackendCandidate,
   SessionProbeResult,
 } from "./discovery";
+import {
+  createRealtimeConnectionSnapshot,
+  RealtimeConnectionLoop,
+  RealtimeConnectionSnapshot,
+} from "./ws/realtimeConnection";
 
 export type DiscoveryState = "idle" | "scanning" | "found" | "not-found";
 
@@ -17,12 +22,16 @@ const selectedBackend = ref<SessionProbeResult | null>(null);
 const pairedBackendUrl = ref<string | null>(null);
 const bearerSession = ref<BearerSession | null>(null);
 const webSocketToken = ref<WebSocketToken | null>(null);
+const realtimeConnection = ref<RealtimeConnectionSnapshot>(
+  createRealtimeConnectionSnapshot({ status: "idle" }),
+);
 const discoveryState = ref<DiscoveryState>("idle");
 const lastScanStartedAt = ref<number | null>(null);
 const lastScanFinishedAt = ref<number | null>(null);
 const scanGeneration = ref(0);
 let scanTimer: number | undefined;
 let listenersAttached = false;
+let realtimeLoop: RealtimeConnectionLoop | null = null;
 
 const candidateCount = computed(() => candidates.value.length);
 const validBackends = computed(() =>
@@ -33,6 +42,24 @@ const lastError = computed(() => {
   return firstFailure?.message ?? "No scan has run yet.";
 });
 const statusText = computed(() => {
+  if (bearerSession.value) {
+    switch (realtimeConnection.value.status) {
+      case "connected":
+        return "Realtime";
+      case "connecting":
+        return "Connecting";
+      case "reconnecting":
+        return "Reconnecting";
+      case "offline":
+        return "Offline";
+      case "auth-required":
+        return "Auth required";
+      case "failed":
+        return "Connection failed";
+      case "idle":
+        break;
+    }
+  }
   if (webSocketToken.value) return "Ready";
   if (bearerSession.value) return "Paired";
   if (selectedBackend.value) {
@@ -44,6 +71,9 @@ const statusText = computed(() => {
   return "Not connected";
 });
 const statusDetail = computed(() => {
+  if (bearerSession.value && realtimeConnection.value.status !== "idle") {
+    return realtimeConnection.value.message;
+  }
   if (bearerSession.value && webSocketToken.value) {
     return `Realtime token ready for ${pairedBackendUrl.value ?? selectedBackend.value?.candidate.url ?? "paired backend"}`;
   }
@@ -154,6 +184,7 @@ function setBearerSession(session: BearerSession | null) {
   if (!session) {
     pairedBackendUrl.value = null;
     webSocketToken.value = null;
+    stopRealtimeConnectionLoop();
   }
 }
 
@@ -169,12 +200,53 @@ function setAuthSession(input: {
   pairedBackendUrl.value = input.backendUrl;
   bearerSession.value = input.bearerSession;
   webSocketToken.value = input.webSocketToken;
+  startRealtimeConnectionLoop();
 }
 
 function clearAuthState() {
   pairedBackendUrl.value = null;
   bearerSession.value = null;
   webSocketToken.value = null;
+  stopRealtimeConnectionLoop();
+}
+
+function startRealtimeConnectionLoop() {
+  if (realtimeLoop) return;
+  realtimeLoop = new RealtimeConnectionLoop({
+    getCredentials: () => {
+      if (!pairedBackendUrl.value || !bearerSession.value) return null;
+      return {
+        backendUrl: pairedBackendUrl.value,
+        sessionToken: bearerSession.value.sessionToken,
+      };
+    },
+    onSnapshot: (snapshot) => {
+      realtimeConnection.value = snapshot;
+    },
+  });
+  realtimeLoop.start();
+  if (typeof window !== "undefined") {
+    window.addEventListener("online", handleRealtimeOnline);
+    window.addEventListener("offline", handleRealtimeOffline);
+  }
+}
+
+function stopRealtimeConnectionLoop() {
+  if (!realtimeLoop) return;
+  realtimeLoop.stop();
+  realtimeLoop = null;
+  if (typeof window !== "undefined") {
+    window.removeEventListener("online", handleRealtimeOnline);
+    window.removeEventListener("offline", handleRealtimeOffline);
+  }
+}
+
+function handleRealtimeOnline() {
+  realtimeLoop?.handleOnline();
+}
+
+function handleRealtimeOffline() {
+  realtimeLoop?.handleOffline();
 }
 
 export function useConnectionState() {
@@ -190,6 +262,7 @@ export function useConnectionState() {
     manualUrl,
     pairedBackendUrl,
     probeResults,
+    realtimeConnection,
     scanBackends,
     selectedBackend,
     setAuthSession,

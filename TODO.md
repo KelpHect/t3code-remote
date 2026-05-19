@@ -235,10 +235,15 @@ client/state modules first; UI consumes state rather than owning transport.
 
 ### State
 
-- [ ] Implement reconnect loop with bounded backoff and visible connection
+- [x] Implement reconnect loop with bounded backoff and visible connection
       states.
       Acceptance: states include connecting, connected, reconnecting, offline,
       auth required, and failed; delays are capped and testable.
+      Evidence: `apps/mobile/src/client/ws/realtimeConnection.ts` owns
+      token refresh, capped retry scheduling, stale-heartbeat checks, and
+      offline/online recovery; `apps/mobile/src/client/connectionState.ts`
+      exposes visible realtime states to the UI; `apps/mobile/tests/unit/realtimeConnection.spec.ts`
+      covers auth-required, connected, failed retry, offline, and backoff caps.
 - [ ] Implement command outbox with client-generated command IDs.
       Acceptance: send/continue/stop commands persist before dispatch, replay
       after reconnect, and are removed only after success or explicit cancel.
