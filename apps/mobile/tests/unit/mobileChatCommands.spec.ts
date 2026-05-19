@@ -2,6 +2,9 @@ import { describe, expect, test } from "vitest";
 
 import {
   buildInterruptOutboxPayload,
+  buildThreadInteractionModeOutboxPayload,
+  buildThreadMetaUpdateOutboxPayload,
+  buildThreadRuntimeModeOutboxPayload,
   buildTurnStartOutboxPayload,
   createMobileEntityId,
   createTitleSeed,
@@ -81,6 +84,42 @@ describe("mobile chat commands", () => {
       createdAt: "2026-05-19T12:00:00.000Z",
       threadId: "thread-1",
       turnId: "turn-1",
+    });
+  });
+
+  test("builds thread settings payloads", () => {
+    expect(
+      buildThreadMetaUpdateOutboxPayload({
+        modelSelection: { instanceId: "codex", model: "gpt-5.4" },
+        threadId: "thread-1",
+      }),
+    ).toEqual({
+      modelSelection: { instanceId: "codex", model: "gpt-5.4" },
+      threadId: "thread-1",
+    });
+
+    expect(
+      buildThreadRuntimeModeOutboxPayload({
+        createdAt: "2026-05-19T12:00:00.000Z",
+        runtimeMode: "approval-required",
+        threadId: "thread-1",
+      }),
+    ).toEqual({
+      createdAt: "2026-05-19T12:00:00.000Z",
+      runtimeMode: "approval-required",
+      threadId: "thread-1",
+    });
+
+    expect(
+      buildThreadInteractionModeOutboxPayload({
+        createdAt: "2026-05-19T12:00:00.000Z",
+        interactionMode: "plan",
+        threadId: "thread-1",
+      }),
+    ).toEqual({
+      createdAt: "2026-05-19T12:00:00.000Z",
+      interactionMode: "plan",
+      threadId: "thread-1",
     });
   });
 

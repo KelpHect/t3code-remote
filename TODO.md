@@ -319,9 +319,21 @@ change backend behavior.
       `apps/mobile/tests/unit/mobileChatCommands.spec.ts` plus existing outbox
       tests cover payloads, generated IDs, bootstrap metadata, interrupt
       payloads, and reconnect replay semantics.
-- [ ] Wire model, runtime mode, and interaction mode controls.
+- [x] Wire model, runtime mode, and interaction mode controls.
       Acceptance: options come from backend-supported config where available and
       dispatch with chat commands.
+      Evidence: `apps/mobile/src/client/mobileModelControls.ts` loads
+      `server.getConfig`/`server.refreshProviders` through the existing `/ws`
+      compatibility client, maps backend provider/model snapshots into
+      app-owned choices, normalizes runtime/interaction modes, and falls back to
+      the current thread/project model when provider config is unavailable.
+      `apps/mobile/src/client/mobileChatCommands.ts` builds
+      `thread.meta.update`, `thread.runtime-mode.set`, and
+      `thread.interaction-mode.set` payloads, `apps/mobile/src/views/ChatPage.vue`
+      replaces the placeholder sheet with real model/runtime/interaction
+      controls that dispatch existing-thread settings through the persistent
+      outbox and apply draft settings to new turns, and unit tests cover provider
+      mapping, mode normalization, selection comparison, and settings payloads.
 
 ### Tools
 

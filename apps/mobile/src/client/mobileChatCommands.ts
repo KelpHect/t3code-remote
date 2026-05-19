@@ -85,6 +85,40 @@ export function buildInterruptOutboxPayload(input: {
   return payload;
 }
 
+export function buildThreadMetaUpdateOutboxPayload(input: {
+  readonly threadId: string;
+  readonly modelSelection: MobileModelSelection;
+}) {
+  return {
+    modelSelection: input.modelSelection,
+    threadId: input.threadId,
+  };
+}
+
+export function buildThreadRuntimeModeOutboxPayload(input: {
+  readonly threadId: string;
+  readonly runtimeMode: string;
+  readonly createdAt?: string;
+}) {
+  return {
+    createdAt: input.createdAt ?? new Date().toISOString(),
+    runtimeMode: input.runtimeMode,
+    threadId: input.threadId,
+  };
+}
+
+export function buildThreadInteractionModeOutboxPayload(input: {
+  readonly threadId: string;
+  readonly interactionMode: string;
+  readonly createdAt?: string;
+}) {
+  return {
+    createdAt: input.createdAt ?? new Date().toISOString(),
+    interactionMode: input.interactionMode,
+    threadId: input.threadId,
+  };
+}
+
 export async function dispatchMobileOrchestrationCommand(
   session: ExistingBackendSession,
   command: MobileOutboxCommand,

@@ -51,6 +51,14 @@ export class ExistingBackendClient {
     );
   }
 
+  getConfig() {
+    return this.transport.request<unknown>("server.getConfig", {});
+  }
+
+  refreshProviders() {
+    return this.transport.request<unknown>("server.refreshProviders", {});
+  }
+
   dispose() {
     this.transport.dispose();
   }

@@ -54,7 +54,7 @@
           </ion-button>
           <ion-button fill="outline" size="small" shape="round" @click="setModelModalOpen(true)">
             <ion-icon slot="start" :icon="codeSlashOutline" />
-            Build
+            {{ activeModeLabel }}
           </ion-button>
           <ion-button fill="outline" size="small" shape="round" @click="continueThread">
             Continue
@@ -200,27 +200,83 @@
         </ion-toolbar>
       </ion-header>
       <ion-content class="sheet-content">
-        <ion-list lines="full">
-          <ion-item>
-            <ion-label>
-              <h2>Model</h2>
-              <p>GPT-5.5</p>
-            </ion-label>
-            <ion-badge color="primary">Active</ion-badge>
-          </ion-item>
-          <ion-item>
-            <ion-label>
-              <h2>Runtime mode</h2>
-              <p>Build</p>
-            </ion-label>
-          </ion-item>
-          <ion-item>
-            <ion-label>
-              <h2>Interaction</h2>
-              <p>High - Normal</p>
-            </ion-label>
-          </ion-item>
-        </ion-list>
+        <section class="mode-sheet">
+          <div class="mode-sheet-head">
+            <div>
+              <p class="eyebrow">Backend supported</p>
+              <h2>{{ activeModelLabel }}</h2>
+              <p>{{ modelConfigStatusText }}</p>
+            </div>
+            <ion-button fill="clear" size="small" @click="refreshProviderModels"
+              >Refresh</ion-button
+            >
+          </div>
+
+          <div class="choice-group">
+            <div class="choice-group-title">
+              <strong>Model</strong>
+              <ion-spinner v-if="modelConfigLoading" name="crescent" />
+            </div>
+            <ion-list lines="none" class="choice-list">
+              <ion-item
+                v-for="choice in availableModelChoices"
+                :key="choice.id"
+                button
+                :detail="false"
+                :class="{ selected: isActiveModelChoice(choice.selection) }"
+                @click="applyModelSelection(choice.selection)"
+              >
+                <ion-label>
+                  <h2>{{ choice.modelLabel }}</h2>
+                  <p>{{ choice.providerLabel }}</p>
+                </ion-label>
+                <ion-badge :color="choice.status === 'ready' ? 'primary' : 'medium'">
+                  {{ choice.status }}
+                </ion-badge>
+              </ion-item>
+            </ion-list>
+          </div>
+
+          <div class="choice-group">
+            <strong>Runtime mode</strong>
+            <ion-list lines="none" class="choice-list">
+              <ion-item
+                v-for="option in mobileRuntimeModeOptions"
+                :key="option.value"
+                button
+                :detail="false"
+                :class="{ selected: activeRuntimeMode === option.value }"
+                @click="applyRuntimeMode(option.value)"
+              >
+                <ion-label>
+                  <h2>{{ option.label }}</h2>
+                  <p>{{ option.detail }}</p>
+                </ion-label>
+              </ion-item>
+            </ion-list>
+          </div>
+
+          <div class="choice-group">
+            <strong>Interaction</strong>
+            <ion-list lines="none" class="choice-list">
+              <ion-item
+                v-for="option in mobileInteractionModeOptions"
+                :key="option.value"
+                button
+                :detail="false"
+                :class="{ selected: activeInteractionMode === option.value }"
+                @click="applyInteractionMode(option.value)"
+              >
+                <ion-label>
+                  <h2>{{ option.label }}</h2>
+                  <p>{{ option.detail }}</p>
+                </ion-label>
+              </ion-item>
+            </ion-list>
+          </div>
+
+          <p v-if="commandError" class="command-error" role="alert">{{ commandError }}</p>
+        </section>
       </ion-content>
     </ion-modal>
 
@@ -383,6 +439,9 @@ import {
 
 import {
   buildInterruptOutboxPayload,
+  buildThreadInteractionModeOutboxPayload,
+  buildThreadMetaUpdateOutboxPayload,
+  buildThreadRuntimeModeOutboxPayload,
   buildTurnStartOutboxPayload,
   createCommandDispatcher,
   createFallbackModelSelection,
@@ -393,6 +452,19 @@ import {
 import { mobileComposerDrafts, type ComposerDraftRef } from "@/client/composerDrafts";
 import { mobileCommandOutbox, type NewMobileOutboxCommand } from "@/client/commandOutbox";
 import { useConnectionState } from "@/client/connectionState";
+import {
+  formatMobileModelSelection,
+  loadMobileModelChoices,
+  mobileInteractionModeOptions,
+  mobileRuntimeModeOptions,
+  normalizeInteractionMode,
+  normalizeRuntimeMode,
+  refreshMobileModelChoices,
+  sameMobileModelSelection,
+  type MobileInteractionMode,
+  type MobileModelChoice,
+  type MobileRuntimeMode,
+} from "@/client/mobileModelControls";
 import { useMobileShellState } from "@/client/mobileShell";
 import { useMobileThreadState } from "@/client/mobileThread";
 
@@ -481,6 +553,12 @@ const emptyChat = ref(false);
 const composerText = ref("");
 const commandBusy = ref(false);
 const commandError = ref<string | null>(null);
+const modelConfigLoading = ref(false);
+const modelConfigError = ref<string | null>(null);
+const modelChoices = ref<readonly MobileModelChoice[]>([]);
+const draftModelSelection = ref<MobileModelSelection | null>(null);
+const draftRuntimeMode = ref<MobileRuntimeMode | null>(null);
+const draftInteractionMode = ref<MobileInteractionMode | null>(null);
 const messages = computed(() => visibleMessages.value);
 
 const activeDraftRef = computed<ComposerDraftRef>(() => ({
@@ -494,7 +572,20 @@ const activeThreadTitle = computed(
   () => activeThreadDetail.value.title ?? activeThread.value?.title ?? "T3 Code",
 );
 const activeProjectTitle = computed(() => activeProject.value?.title ?? "T3 Code");
-const activeModelLabel = computed(() => activeThread.value?.modelLabel ?? "GPT-5.5");
+const activeModelSelection = computed(() => resolveModelSelection());
+const activeRuntimeMode = computed<MobileRuntimeMode>(
+  () => draftRuntimeMode.value ?? normalizeRuntimeMode(activeThread.value?.runtimeMode),
+);
+const activeInteractionMode = computed<MobileInteractionMode>(
+  () => draftInteractionMode.value ?? normalizeInteractionMode(activeThread.value?.interactionMode),
+);
+const activeModelLabel = computed(() => formatMobileModelSelection(activeModelSelection.value));
+const activeModeLabel = computed(() => {
+  const runtimeLabel =
+    mobileRuntimeModeOptions.find((option) => option.value === activeRuntimeMode.value)?.label ??
+    "Full access";
+  return activeInteractionMode.value === "plan" ? `Plan · ${runtimeLabel}` : runtimeLabel;
+});
 const shellBadgeText = computed(() => {
   if (threadSync.value.status === "synced") return "Live";
   if (threadSync.value.status === "connecting") return "Loading";
@@ -558,6 +649,32 @@ const commandSession = computed(() => {
     sessionToken: bearerSession.value.sessionToken,
   };
 });
+const availableModelChoices = computed(() => {
+  const choices = modelChoices.value;
+  const currentSelection = activeModelSelection.value;
+  if (choices.some((choice) => sameMobileModelSelection(choice.selection, currentSelection))) {
+    return choices;
+  }
+  return [
+    {
+      id: "current-selection",
+      modelLabel: formatMobileModelSelection(currentSelection),
+      providerLabel: "Current thread",
+      selection: currentSelection,
+      status: "ready" as const,
+      supportsPlanMode: true,
+    },
+    ...choices,
+  ];
+});
+const modelConfigStatusText = computed(() => {
+  if (modelConfigLoading.value) return "Loading provider models from the paired backend.";
+  if (modelConfigError.value) return modelConfigError.value;
+  if (modelChoices.value.length > 0) {
+    return `${modelChoices.value.length} model option${modelChoices.value.length === 1 ? "" : "s"} from the paired backend.`;
+  }
+  return "Using the current thread model until backend config loads.";
+});
 
 const activeToolDetails = computed(() => {
   if (!activeTool.value) {
@@ -573,6 +690,7 @@ const activeToolDetails = computed(() => {
 
 const setModelModalOpen = (open: boolean) => {
   modelModalOpen.value = open;
+  if (open) void refreshModelConfig();
 };
 
 const setToolsOpen = (open: boolean) => {
@@ -669,11 +787,94 @@ const dispatchOutboxCommand = async (command: NewMobileOutboxCommand) => {
   }
 };
 
+const refreshModelConfig = async () => {
+  const session = commandSession.value;
+  if (!session) {
+    modelConfigError.value = "Pair with a backend to load supported models.";
+    return;
+  }
+  modelConfigLoading.value = true;
+  modelConfigError.value = null;
+  try {
+    modelChoices.value = await loadMobileModelChoices(session);
+  } catch (error) {
+    modelConfigError.value =
+      error instanceof Error ? error.message : "Could not load provider models.";
+  } finally {
+    modelConfigLoading.value = false;
+  }
+};
+
+const refreshProviderModels = async () => {
+  const session = commandSession.value;
+  if (!session) {
+    modelConfigError.value = "Pair with a backend to refresh providers.";
+    return;
+  }
+  modelConfigLoading.value = true;
+  modelConfigError.value = null;
+  try {
+    modelChoices.value = await refreshMobileModelChoices(session);
+  } catch (error) {
+    modelConfigError.value = error instanceof Error ? error.message : "Provider refresh failed.";
+  } finally {
+    modelConfigLoading.value = false;
+  }
+};
+
+const applyModelSelection = async (selection: MobileModelSelection) => {
+  if (sameMobileModelSelection(selection, activeModelSelection.value)) return;
+  draftModelSelection.value = selection;
+  const thread = activeThread.value;
+  if (!thread || emptyChat.value) return;
+  await dispatchOutboxCommand({
+    intent: "settings",
+    payload: buildThreadMetaUpdateOutboxPayload({
+      modelSelection: selection,
+      threadId: thread.id,
+    }),
+    type: "thread.meta.update",
+  });
+};
+
+const applyRuntimeMode = async (runtimeMode: MobileRuntimeMode) => {
+  if (runtimeMode === activeRuntimeMode.value) return;
+  draftRuntimeMode.value = runtimeMode;
+  const thread = activeThread.value;
+  if (!thread || emptyChat.value) return;
+  await dispatchOutboxCommand({
+    intent: "settings",
+    payload: buildThreadRuntimeModeOutboxPayload({
+      runtimeMode,
+      threadId: thread.id,
+    }),
+    type: "thread.runtime-mode.set",
+  });
+};
+
+const applyInteractionMode = async (interactionMode: MobileInteractionMode) => {
+  if (interactionMode === activeInteractionMode.value) return;
+  draftInteractionMode.value = interactionMode;
+  const thread = activeThread.value;
+  if (!thread || emptyChat.value) return;
+  await dispatchOutboxCommand({
+    intent: "settings",
+    payload: buildThreadInteractionModeOutboxPayload({
+      interactionMode,
+      threadId: thread.id,
+    }),
+    type: "thread.interaction-mode.set",
+  });
+};
+
+const isActiveModelChoice = (selection: MobileModelSelection) =>
+  sameMobileModelSelection(selection, activeModelSelection.value);
+
 const resolveTurnTarget = (text: string) => {
   const thread = activeThread.value;
   const project = activeProject.value;
-  const runtimeMode = thread?.runtimeMode ?? "full-access";
-  const interactionMode = thread?.interactionMode ?? "default";
+  const runtimeMode = activeRuntimeMode.value;
+  const interactionMode = activeInteractionMode.value;
   const modelSelection = resolveModelSelection();
   const titleSeed = createTitleSeed(text);
   if (thread && !emptyChat.value) {
@@ -714,6 +915,7 @@ const resolveTurnTarget = (text: string) => {
 };
 
 const resolveModelSelection = (): MobileModelSelection => {
+  if (draftModelSelection.value) return draftModelSelection.value;
   const threadSelection = activeThread.value?.modelSelection;
   const projectSelection = activeProject.value?.defaultModelSelection;
   if (isModelSelection(threadSelection)) return threadSelection;
@@ -766,6 +968,26 @@ watch(
       sessionToken,
       threadId,
     });
+  },
+  { immediate: true },
+);
+
+watch(
+  () => [activeThreadId.value, emptyChat.value] as const,
+  () => {
+    draftModelSelection.value = null;
+    draftRuntimeMode.value = null;
+    draftInteractionMode.value = null;
+    commandError.value = null;
+  },
+);
+
+watch(
+  commandSession,
+  (session) => {
+    modelChoices.value = [];
+    modelConfigError.value = null;
+    if (session) void refreshModelConfig();
   },
   { immediate: true },
 );
@@ -1150,6 +1372,92 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 
 .sheet-content {
   --padding-bottom: 1rem;
+}
+
+.mode-sheet {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.mode-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: 1rem;
+  background: var(--t3-panel-background);
+  padding: 1rem;
+}
+
+.mode-sheet-head h2,
+.mode-sheet-head p {
+  margin: 0;
+}
+
+.mode-sheet-head h2 {
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.mode-sheet-head p:not(.eyebrow) {
+  color: var(--ion-color-medium);
+  line-height: 1.45;
+}
+
+.choice-group {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.choice-group-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.choice-group-title ion-spinner {
+  width: 1rem;
+  height: 1rem;
+}
+
+.choice-list {
+  display: grid;
+  gap: 0.45rem;
+  background: transparent;
+}
+
+.choice-list ion-item {
+  --background: var(--t3-panel-background);
+  --border-radius: 0.9rem;
+  --inner-border-width: 0;
+  --padding-bottom: 0.45rem;
+  --padding-top: 0.45rem;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: 0.9rem;
+}
+
+.choice-list ion-item.selected {
+  border-color: var(--ion-color-primary);
+  box-shadow: 0 0 0 1px rgba(var(--ion-color-primary-rgb), 0.25);
+}
+
+.choice-list h2,
+.choice-list p {
+  margin: 0;
+}
+
+.choice-list h2 {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.choice-list p {
+  color: var(--ion-color-medium);
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .sheet-note {
