@@ -15,7 +15,7 @@ import {
 
 export type DiscoveryState = "idle" | "scanning" | "found" | "not-found";
 
-const manualUrl = ref("");
+const manualUrl = ref("http://192.168.0.152:3773");
 const candidates = ref<readonly BackendCandidate[]>([]);
 const probeResults = ref<readonly SessionProbeResult[]>([]);
 const selectedBackend = ref<SessionProbeResult | null>(null);
@@ -29,8 +29,6 @@ const discoveryState = ref<DiscoveryState>("idle");
 const lastScanStartedAt = ref<number | null>(null);
 const lastScanFinishedAt = ref<number | null>(null);
 const scanGeneration = ref(0);
-let scanTimer: number | undefined;
-let listenersAttached = false;
 let realtimeLoop: RealtimeConnectionLoop | null = null;
 
 const candidateCount = computed(() => candidates.value.length);
@@ -93,6 +91,7 @@ const statusDetail = computed(() => {
 });
 
 async function scanBackends() {
+  const previousSelectedBackend = selectedBackend.value;
   const generation = scanGeneration.value + 1;
   scanGeneration.value = generation;
   discoveryState.value = "scanning";
@@ -132,47 +131,18 @@ async function scanBackends() {
   }
 
   if (!foundCurrentScan) {
-    selectedBackend.value = null;
+    selectedBackend.value = previousSelectedBackend;
     discoveryState.value = "not-found";
   }
   lastScanFinishedAt.value = Date.now();
 }
 
-function scanIfVisible() {
-  if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
-  void scanBackends();
-}
-
-function attachRealtimeScanListeners() {
-  if (listenersAttached || typeof window === "undefined") return;
-  listenersAttached = true;
-  window.addEventListener("focus", scanIfVisible);
-  window.addEventListener("online", scanIfVisible);
-  document.addEventListener("visibilitychange", scanIfVisible);
-}
-
-function detachRealtimeScanListeners() {
-  if (!listenersAttached || typeof window === "undefined") return;
-  listenersAttached = false;
-  window.removeEventListener("focus", scanIfVisible);
-  window.removeEventListener("online", scanIfVisible);
-  document.removeEventListener("visibilitychange", scanIfVisible);
-}
-
 function startDiscoveryLoop() {
-  if (scanTimer !== undefined) return;
-  void scanBackends();
-  attachRealtimeScanListeners();
-  scanTimer = window.setInterval(() => {
-    scanIfVisible();
-  }, 3000);
+  candidates.value = generateBackendCandidates({ manualUrl: manualUrl.value });
 }
 
 function stopDiscoveryLoop() {
-  if (scanTimer === undefined) return;
-  window.clearInterval(scanTimer);
-  scanTimer = undefined;
-  detachRealtimeScanListeners();
+  scanGeneration.value += 1;
 }
 
 function setManualUrl(value: string) {

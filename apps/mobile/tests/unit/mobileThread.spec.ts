@@ -24,6 +24,7 @@ describe("mobile thread state", () => {
               role: "assistant",
               text: "Hello from T3.",
               createdAt: "2026-05-19T10:01:00.000Z",
+              turnId: "turn-1",
             }),
             makeMessage({
               id: "user-1",
@@ -61,6 +62,14 @@ describe("mobile thread state", () => {
             status: "running",
             updatedAt: "2026-05-19T10:02:00.000Z",
           },
+          latestTurn: {
+            assistantMessageId: "assistant-1",
+            completedAt: null,
+            requestedAt: "2026-05-19T10:00:00.000Z",
+            startedAt: "2026-05-19T10:01:00.000Z",
+            state: "running",
+            turnId: "turn-1",
+          },
           updatedAt: "2026-05-19T10:02:00.000Z",
         },
       },
@@ -78,6 +87,11 @@ describe("mobile thread state", () => {
       activeTurnId: "turn-1",
       providerName: "Codex",
       status: "running",
+    });
+    expect(state.latestTurn).toMatchObject({
+      assistantMessageId: "assistant-1",
+      state: "running",
+      turnId: "turn-1",
     });
     expect(state.turnDiffSummaries).toEqual([
       {
@@ -100,6 +114,75 @@ describe("mobile thread state", () => {
         turnId: "turn-1",
       },
     ]);
+  });
+
+  test("appends streaming assistant deltas and completes with final text like desktop", () => {
+    const initial: MobileThreadDetail = {
+      ...createEmptyMobileThreadDetail("thread-1"),
+      sequence: 10,
+    };
+
+    const firstDelta = reduceMobileThreadStreamItem(initial, {
+      kind: "event",
+      event: {
+        aggregateId: "thread-1",
+        sequence: 11,
+        type: "thread.message-sent",
+        payload: makeMessage({
+          id: "assistant-1",
+          role: "assistant",
+          streaming: true,
+          text: "Hello",
+          turnId: "turn-1",
+        }),
+      },
+    });
+    const secondDelta = reduceMobileThreadStreamItem(firstDelta, {
+      kind: "event",
+      event: {
+        aggregateId: "thread-1",
+        sequence: 12,
+        type: "thread.message-sent",
+        payload: makeMessage({
+          id: "assistant-1",
+          role: "assistant",
+          streaming: true,
+          text: " there",
+          turnId: "turn-1",
+        }),
+      },
+    });
+    const completed = reduceMobileThreadStreamItem(secondDelta, {
+      kind: "event",
+      event: {
+        aggregateId: "thread-1",
+        sequence: 13,
+        type: "thread.message-sent",
+        payload: makeMessage({
+          id: "assistant-1",
+          role: "assistant",
+          streaming: false,
+          text: "Hello there.",
+          turnId: "turn-1",
+        }),
+      },
+    });
+
+    expect(secondDelta.messages[0]).toMatchObject({
+      streaming: true,
+      text: "Hello there",
+    });
+    expect(completed.messages[0]).toMatchObject({
+      completedAt: "2026-05-19T10:00:00.000Z",
+      streaming: false,
+      text: "Hello there.",
+      turnId: "turn-1",
+    });
+    expect(completed.latestTurn).toMatchObject({
+      assistantMessageId: "assistant-1",
+      state: "completed",
+      turnId: "turn-1",
+    });
   });
 
   test("applies live message and activity events by increasing sequence", () => {
@@ -284,13 +367,16 @@ function makeMessage(input: {
   readonly role: "user" | "assistant" | "system";
   readonly text: string;
   readonly createdAt?: string;
+  readonly streaming?: boolean;
+  readonly turnId?: string | null;
 }) {
   return {
     createdAt: input.createdAt ?? "2026-05-19T10:00:00.000Z",
     id: input.id,
     role: input.role,
-    streaming: false,
+    streaming: input.streaming ?? false,
     text: input.text,
+    turnId: input.turnId ?? null,
     updatedAt: input.createdAt ?? "2026-05-19T10:00:00.000Z",
   };
 }
@@ -300,10 +386,12 @@ function makeMappedMessage(id: string) {
     author: "T3 Code",
     avatar: "T3",
     createdAt: "2026-05-19T10:00:00.000Z",
+    completedAt: "2026-05-19T10:00:00.000Z",
     id,
     role: "assistant" as const,
     streaming: false,
     text: "current",
+    turnId: null,
     updatedAt: "2026-05-19T10:00:00.000Z",
   };
 }

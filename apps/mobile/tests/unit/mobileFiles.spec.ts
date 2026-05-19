@@ -5,6 +5,7 @@ import {
   isLikelyRemoteUrl,
   mapMobileCloneResult,
   mapMobileFilesystemBrowseResult,
+  mapMobileProjectSearchResult,
   mapMobileRepositoryInfo,
 } from "@/client/mobileFiles";
 
@@ -21,6 +22,25 @@ describe("mobile file and clone helpers", () => {
     ).toEqual({
       entries: [{ fullPath: "/repo/apps", name: "apps" }],
       parentPath: "/repo",
+    });
+  });
+
+  test("maps project file search entries", () => {
+    expect(
+      mapMobileProjectSearchResult({
+        entries: [
+          { kind: "file", parentPath: "src", path: "src/App.vue" },
+          { kind: "directory", path: "src/client" },
+          { kind: "other", path: "ignored" },
+        ],
+        truncated: true,
+      }),
+    ).toEqual({
+      entries: [
+        { kind: "file", parentPath: "src", path: "src/App.vue" },
+        { kind: "directory", parentPath: null, path: "src/client" },
+      ],
+      truncated: true,
     });
   });
 

@@ -16,6 +16,17 @@ export interface MobileFilesystemBrowseResult {
   readonly entries: readonly MobileFilesystemEntry[];
 }
 
+export interface MobileProjectEntry {
+  readonly path: string;
+  readonly kind: "file" | "directory";
+  readonly parentPath: string | null;
+}
+
+export interface MobileProjectSearchResult {
+  readonly entries: readonly MobileProjectEntry[];
+  readonly truncated: boolean;
+}
+
 export interface MobileRepositoryInfo {
   readonly provider: string;
   readonly nameWithOwner: string;
@@ -41,6 +52,27 @@ export async function browseMobileFilesystem(input: {
       await client.browseFilesystem({
         ...(input.cwd ? { cwd: input.cwd } : {}),
         partialPath: input.partialPath,
+      }),
+    );
+  } finally {
+    client.dispose();
+  }
+}
+
+export async function searchMobileProjectEntries(input: {
+  readonly session: ExistingBackendSession;
+  readonly cwd: string;
+  readonly query: string;
+  readonly limit?: number;
+}) {
+  const client = await createExistingBackendClient(input.session);
+  try {
+    await client.connect();
+    return mapMobileProjectSearchResult(
+      await client.searchProjectEntries({
+        cwd: input.cwd,
+        limit: input.limit ?? 80,
+        query: input.query.trim() || ".",
       }),
     );
   } finally {
@@ -102,6 +134,14 @@ export function mapMobileFilesystemBrowseResult(value: unknown): MobileFilesyste
   };
 }
 
+export function mapMobileProjectSearchResult(value: unknown): MobileProjectSearchResult {
+  const result = asRecord(value);
+  return {
+    entries: readArray(result.entries).map(mapProjectEntry).filter(isPresent),
+    truncated: result.truncated === true,
+  };
+}
+
 export function mapMobileRepositoryInfo(value: unknown): MobileRepositoryInfo {
   const repository = asRecord(value);
   return {
@@ -131,6 +171,18 @@ export function inferMobileProjectTitle(path: string) {
 
 export function isLikelyRemoteUrl(value: string) {
   return /^(https?:\/\/|git@|ssh:\/\/)/i.test(value.trim());
+}
+
+function mapProjectEntry(value: unknown): MobileProjectEntry | null {
+  const entry = asRecord(value);
+  const path = readString(entry.path);
+  const kind = entry.kind === "file" || entry.kind === "directory" ? entry.kind : null;
+  if (!path || !kind) return null;
+  return {
+    kind,
+    parentPath: readString(entry.parentPath),
+    path,
+  };
 }
 
 function mapFilesystemEntry(value: unknown): MobileFilesystemEntry | null {

@@ -12,12 +12,26 @@ export interface MobileDiffFile {
   readonly deletions: number;
 }
 
+export type MobileDiffLineType = "file" | "hunk" | "add" | "del" | "context" | "meta";
+
+export interface MobileDiffLine {
+  readonly id: string;
+  readonly type: MobileDiffLineType;
+  readonly text: string;
+}
+
+export interface MobileDiffFileBlock extends MobileDiffFile {
+  readonly diff: string;
+  readonly lines: readonly MobileDiffLine[];
+}
+
 export interface MobileUnifiedDiff {
   readonly threadId: string | null;
   readonly fromTurnCount: number | null;
   readonly toTurnCount: number | null;
   readonly diff: string;
   readonly files: readonly MobileDiffFile[];
+  readonly fileBlocks: readonly MobileDiffFileBlock[];
   readonly lineCount: number;
   readonly truncated: boolean;
   readonly binary: boolean;
@@ -79,12 +93,15 @@ export function mapMobileUnifiedDiff(result: unknown): MobileUnifiedDiff {
   const previewDiff = truncated
     ? `${previewLines.join("\n")}\n... truncated ${lines.length - MOBILE_DIFF_PREVIEW_LINE_LIMIT} lines ...`
     : diff;
+  const parsedBlocks = previewDiff ? parseUnifiedDiffFileBlocks(previewDiff) : [];
 
   return {
     binary: /(^|\n)(Binary files|GIT binary patch)/.test(diff),
     diff: previewDiff,
     empty: diff.trim().length === 0 && fileSummaries.length === 0,
-    files: parsedFiles.length > 0 ? parsedFiles : fileSummaries,
+    fileBlocks: parsedBlocks,
+    files:
+      parsedBlocks.length > 0 ? parsedBlocks : parsedFiles.length > 0 ? parsedFiles : fileSummaries,
     fromTurnCount: readNonNegativeInt(value?.fromTurnCount),
     lineCount: diff.trim().length === 0 ? 0 : lines.length,
     threadId: readString(value?.threadId),
@@ -139,6 +156,87 @@ export function parseUnifiedDiffFiles(diff: string): readonly MobileDiffFile[] {
   return files;
 }
 
+export function parseUnifiedDiffFileBlocks(diff: string): readonly MobileDiffFileBlock[] {
+  const blocks: MobileDiffFileBlock[] = [];
+  let current: {
+    path: string;
+    oldPath: string | null;
+    newPath: string | null;
+    additions: number;
+    deletions: number;
+    lines: string[];
+  } | null = null;
+
+  const flush = () => {
+    if (!current) return;
+    const blockDiff = current.lines.join("\n");
+    blocks.push({
+      ...toDiffFile(current),
+      diff: blockDiff,
+      lines: parseUnifiedDiffLines(blockDiff),
+    });
+    current = null;
+  };
+
+  for (const line of diff.replace(/\r\n/g, "\n").split("\n")) {
+    const header = /^diff --git a\/(.+) b\/(.+)$/.exec(line);
+    if (header) {
+      flush();
+      current = {
+        additions: 0,
+        deletions: 0,
+        lines: [line],
+        newPath: header[2] ?? null,
+        oldPath: header[1] ?? null,
+        path: header[2] ?? header[1] ?? "unknown",
+      };
+      continue;
+    }
+    if (!current) {
+      current = {
+        additions: 0,
+        deletions: 0,
+        lines: [line],
+        newPath: null,
+        oldPath: null,
+        path: "Diff preview",
+      };
+      continue;
+    }
+    current.lines.push(line);
+    if (line.startsWith("rename to ")) {
+      current.newPath = line.slice("rename to ".length).trim() || current.newPath;
+      current.path = current.newPath ?? current.path;
+      continue;
+    }
+    if (line.startsWith("+++ b/")) {
+      current.newPath = line.slice("+++ b/".length).trim() || current.newPath;
+      current.path = current.newPath ?? current.path;
+      continue;
+    }
+    if (line.startsWith("--- a/")) {
+      current.oldPath = line.slice("--- a/".length).trim() || current.oldPath;
+      continue;
+    }
+    if (line.startsWith("+") && !line.startsWith("+++")) current.additions += 1;
+    if (line.startsWith("-") && !line.startsWith("---")) current.deletions += 1;
+  }
+
+  flush();
+  return blocks;
+}
+
+export function parseUnifiedDiffLines(diff: string): readonly MobileDiffLine[] {
+  return diff
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line, index) => ({
+      id: `${index}-${line.slice(0, 24)}`,
+      text: line,
+      type: classifyDiffLine(line),
+    }));
+}
+
 function toDiffFile(input: {
   readonly path: string;
   readonly oldPath: string | null;
@@ -154,6 +252,15 @@ function toDiffFile(input: {
     path: input.path,
     status: null,
   };
+}
+
+function classifyDiffLine(line: string): MobileDiffLineType {
+  if (line.startsWith("diff --git")) return "file";
+  if (line.startsWith("@@")) return "hunk";
+  if (line.startsWith("+") && !line.startsWith("+++")) return "add";
+  if (line.startsWith("-") && !line.startsWith("---")) return "del";
+  if (line.startsWith(" ") || line.length === 0) return "context";
+  return "meta";
 }
 
 function mapDiffFile(file: unknown): MobileDiffFile | null {

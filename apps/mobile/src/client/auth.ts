@@ -31,6 +31,7 @@ export interface IssueWebSocketTokenOptions {
 }
 
 const PAIRING_TOKEN_PARAM = "token";
+const PAIRING_HOST_PARAM = "host";
 
 const defaultFetch: typeof fetch = (...args) => globalThis.fetch(...args);
 
@@ -67,6 +68,34 @@ function parsePairingUrl(input: string) {
   }
 }
 
+function isLoopbackHostname(hostname: string) {
+  const normalized = hostname.trim().toLowerCase().replace(/^\[/, "").replace(/\]$/, "");
+  return normalized === "127.0.0.1" || normalized === "localhost" || normalized === "::1";
+}
+
+function resolveBackendUrlFromPairingUrl(pairingUrl: URL, fallbackBackendUrl: string) {
+  const hostedBackendUrl = pairingUrl.searchParams.get(PAIRING_HOST_PARAM)?.trim();
+  if (hostedBackendUrl) {
+    const normalizedHostedBackendUrl = normalizeBackendUrl(hostedBackendUrl);
+    if (normalizedHostedBackendUrl) return normalizedHostedBackendUrl;
+  }
+
+  const normalizedPairingUrl = normalizeBackendUrl(pairingUrl.toString());
+  if (!normalizedPairingUrl) return fallbackBackendUrl;
+
+  const pairingBackendUrl = new URL(normalizedPairingUrl);
+  const fallbackUrl = new URL(fallbackBackendUrl);
+  if (
+    isLoopbackHostname(pairingBackendUrl.hostname) &&
+    !isLoopbackHostname(fallbackUrl.hostname) &&
+    pairingBackendUrl.port === fallbackUrl.port
+  ) {
+    return fallbackBackendUrl;
+  }
+
+  return normalizedPairingUrl;
+}
+
 export function resolvePairingTarget(input: {
   readonly backendUrl: string;
   readonly pairingInput: string;
@@ -95,7 +124,7 @@ export function resolvePairingTarget(input: {
   }
 
   return {
-    backendUrl: normalizeBackendUrl(pairingUrl.toString()) ?? fallbackBackendUrl,
+    backendUrl: resolveBackendUrlFromPairingUrl(pairingUrl, fallbackBackendUrl),
     credential,
   };
 }

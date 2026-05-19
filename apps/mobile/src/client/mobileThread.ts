@@ -14,8 +14,10 @@ export interface MobileThreadMessage {
   readonly avatar: string;
   readonly author: string;
   readonly text: string;
+  readonly turnId: string | null;
   readonly streaming: boolean;
   readonly createdAt: string | null;
+  readonly completedAt: string | null;
   readonly updatedAt: string | null;
 }
 
@@ -27,8 +29,19 @@ export interface MobileThreadActivity {
   readonly payload: Record<string, unknown> | null;
   readonly detail: string | null;
   readonly createdAt: string | null;
+  readonly sequence: number | null;
+  readonly turnId: string | null;
   readonly requestId: string | null;
   readonly requestKind: "command" | "file-read" | "file-change" | null;
+}
+
+export interface MobileLatestTurn {
+  readonly turnId: string;
+  readonly state: string;
+  readonly requestedAt: string;
+  readonly startedAt: string | null;
+  readonly completedAt: string | null;
+  readonly assistantMessageId: string | null;
 }
 
 export interface MobilePendingApproval {
@@ -102,6 +115,7 @@ export interface MobileThreadDetail {
   readonly proposedPlans: readonly MobileProposedPlan[];
   readonly turnDiffSummaries: readonly MobileTurnDiffSummary[];
   readonly session: MobileThreadSession | null;
+  readonly latestTurn: MobileLatestTurn | null;
   readonly updatedAt: string | null;
   readonly deleted: boolean;
   readonly archived: boolean;
@@ -133,6 +147,7 @@ export function createEmptyMobileThreadDetail(threadId: string | null = null): M
     archived: false,
     deleted: false,
     messages: [],
+    latestTurn: null,
     projectId: null,
     proposedPlans: [],
     sequence: null,
@@ -295,6 +310,7 @@ function reduceThreadSnapshot(state: MobileThreadDetail, snapshot: Record<string
     archived: readString(thread.archivedAt) !== null,
     deleted: readString(thread.deletedAt) !== null,
     messages: sortMessages(readArray(thread.messages).map(mapMobileMessage).filter(isPresent)),
+    latestTurn: mapMobileLatestTurn(thread.latestTurn),
     projectId: readString(thread.projectId),
     proposedPlans: sortPlans(
       readArray(thread.proposedPlans).map(mapMobileProposedPlan).filter(isPresent),
@@ -321,9 +337,35 @@ function reduceThreadEvent(state: MobileThreadDetail, event: Record<string, unkn
     case "thread.message-sent": {
       const message = mapMobileMessage(payload);
       if (!message) return { ...state, sequence };
+      const messages = mergeMessage(state.messages, message);
+      const latestTurn =
+        message.role === "assistant" && message.turnId
+          ? buildLatestTurn({
+              assistantMessageId: message.id,
+              completedAt: message.streaming
+                ? (state.latestTurn?.completedAt ?? null)
+                : message.updatedAt,
+              previous: state.latestTurn,
+              requestedAt:
+                state.latestTurn?.turnId === message.turnId
+                  ? state.latestTurn.requestedAt
+                  : (message.createdAt ?? eventOccurredAt(event) ?? new Date(0).toISOString()),
+              startedAt:
+                state.latestTurn?.turnId === message.turnId
+                  ? (state.latestTurn.startedAt ?? message.createdAt)
+                  : message.createdAt,
+              state: message.streaming
+                ? "running"
+                : state.latestTurn?.state === "interrupted" || state.latestTurn?.state === "error"
+                  ? state.latestTurn.state
+                  : "completed",
+              turnId: message.turnId,
+            })
+          : state.latestTurn;
       return {
         ...state,
-        messages: sortMessages(upsertById(state.messages, message)),
+        latestTurn,
+        messages,
         sequence,
         updatedAt: readString(payload?.updatedAt) ?? state.updatedAt,
       };
@@ -356,10 +398,32 @@ function reduceThreadEvent(state: MobileThreadDetail, event: Record<string, unkn
       };
     }
     case "thread.session-set": {
+      const session = mapMobileSession(payload?.session);
       return {
         ...state,
         sequence,
-        session: mapMobileSession(payload?.session),
+        latestTurn:
+          session?.status === "running" && session.activeTurnId
+            ? buildLatestTurn({
+                assistantMessageId:
+                  state.latestTurn?.turnId === session.activeTurnId
+                    ? state.latestTurn.assistantMessageId
+                    : null,
+                completedAt: null,
+                previous: state.latestTurn,
+                requestedAt:
+                  state.latestTurn?.turnId === session.activeTurnId
+                    ? state.latestTurn.requestedAt
+                    : (session.updatedAt ?? eventOccurredAt(event) ?? new Date(0).toISOString()),
+                startedAt:
+                  state.latestTurn?.turnId === session.activeTurnId
+                    ? (state.latestTurn.startedAt ?? session.updatedAt)
+                    : session.updatedAt,
+                state: "running",
+                turnId: session.activeTurnId,
+              })
+            : state.latestTurn,
+        session,
       };
     }
     case "thread.meta-updated": {
@@ -392,6 +456,22 @@ function reduceThreadEvent(state: MobileThreadDetail, event: Record<string, unkn
         deleted: true,
         sequence,
         updatedAt: readString(payload?.deletedAt) ?? state.updatedAt,
+      };
+    }
+    case "thread.runtime-mode-set":
+    case "thread.runtime-mode.set": {
+      return {
+        ...state,
+        sequence,
+        updatedAt: readString(payload?.updatedAt) ?? state.updatedAt,
+      };
+    }
+    case "thread.interaction-mode-set":
+    case "thread.interaction-mode.set": {
+      return {
+        ...state,
+        sequence,
+        updatedAt: readString(payload?.updatedAt) ?? state.updatedAt,
       };
     }
     default:
@@ -441,15 +521,19 @@ function mapMobileMessage(payload: unknown): MobileThreadMessage | null {
   const role = readMessageRole(payload.role);
   const text = typeof payload.text === "string" ? payload.text : null;
   if (!id || !role || text === null) return null;
+  const streaming = payload.streaming === true;
+  const updatedAt = readString(payload.updatedAt);
   return {
     author: role === "user" ? "You" : role === "assistant" ? "T3 Code" : "System",
     avatar: role === "user" ? "K" : role === "assistant" ? "T3" : "!",
     createdAt: readString(payload.createdAt),
+    completedAt: readString(payload.completedAt) ?? (!streaming ? updatedAt : null),
     id,
     role,
-    streaming: payload.streaming === true,
+    streaming,
     text,
-    updatedAt: readString(payload.updatedAt),
+    turnId: readString(payload.turnId),
+    updatedAt,
   };
 }
 
@@ -468,8 +552,10 @@ function mapMobileActivity(payload: unknown): MobileThreadActivity | null {
     payload: activityPayload,
     requestId: readString(activityPayload?.requestId),
     requestKind: readRequestKind(activityPayload),
+    sequence: readNonNegativeInt(payload.sequence),
     summary,
     tone: readString(payload.tone),
+    turnId: readString(payload.turnId),
   };
 }
 
@@ -501,6 +587,68 @@ function mapMobileSession(payload: unknown): MobileThreadSession | null {
     status,
     updatedAt: readString(payload.updatedAt),
   };
+}
+
+function mapMobileLatestTurn(payload: unknown): MobileLatestTurn | null {
+  if (!isObject(payload)) return null;
+  const turnId = readString(payload.turnId);
+  const state = readString(payload.state);
+  const requestedAt = readString(payload.requestedAt);
+  if (!turnId || !state || !requestedAt) return null;
+  return {
+    assistantMessageId: readString(payload.assistantMessageId),
+    completedAt: readString(payload.completedAt),
+    requestedAt,
+    startedAt: readString(payload.startedAt),
+    state,
+    turnId,
+  };
+}
+
+function buildLatestTurn(input: {
+  readonly previous: MobileLatestTurn | null;
+  readonly turnId: string;
+  readonly state: string;
+  readonly requestedAt: string;
+  readonly startedAt: string | null;
+  readonly completedAt: string | null;
+  readonly assistantMessageId: string | null;
+}): MobileLatestTurn {
+  return {
+    assistantMessageId: input.assistantMessageId,
+    completedAt: input.completedAt,
+    requestedAt: input.requestedAt,
+    startedAt: input.startedAt,
+    state: input.state,
+    turnId: input.turnId,
+  };
+}
+
+function mergeMessage(
+  messages: readonly MobileThreadMessage[],
+  nextMessage: MobileThreadMessage,
+): readonly MobileThreadMessage[] {
+  const existing = messages.find((message) => message.id === nextMessage.id);
+  if (!existing) return sortMessages([...messages, nextMessage]);
+
+  const merged: MobileThreadMessage = {
+    ...existing,
+    ...nextMessage,
+    completedAt: nextMessage.completedAt ?? existing.completedAt,
+    text: nextMessage.streaming
+      ? `${existing.text}${nextMessage.text}`
+      : nextMessage.text.length > 0
+        ? nextMessage.text
+        : existing.text,
+    turnId: nextMessage.turnId ?? existing.turnId,
+  };
+  return sortMessages(
+    messages.map((message) => (message.id === nextMessage.id ? merged : message)),
+  );
+}
+
+function eventOccurredAt(event: Record<string, unknown>) {
+  return readString(event.occurredAt) ?? readString(event.createdAt);
 }
 
 export function derivePendingApprovals(

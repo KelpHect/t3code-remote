@@ -22,7 +22,7 @@
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="chat-content" :fullscreen="true">
+    <ion-content ref="chatContent" class="chat-content" :fullscreen="true">
       <main class="chat-thread" aria-label="Chat thread">
         <section class="thread-status" aria-label="Current project status">
           <div>
@@ -120,32 +120,73 @@
             </article>
           </div>
 
-          <p v-if="messages.length === 0" class="empty-thread-note">{{ threadEmptyCopy }}</p>
+          <p v-if="timelineRows.length === 0" class="empty-thread-note">{{ threadEmptyCopy }}</p>
           <p v-if="commandError" class="command-error" role="alert">{{ commandError }}</p>
 
-          <article
-            v-for="message in messages"
-            :key="message.id"
-            class="message"
-            :class="`message-${message.role}`"
-          >
-            <div class="avatar" aria-hidden="true">{{ message.avatar }}</div>
-            <div class="message-body">
-              <p class="message-author">{{ message.author }}</p>
-              <p>{{ message.text }}</p>
-            </div>
-          </article>
-
-          <section v-if="visibleActivities.length > 0" class="activity-feed" aria-label="Actions">
-            <p class="eyebrow">Actions</p>
-            <article v-for="activity in visibleActivities" :key="activity.id" class="activity-row">
-              <span class="activity-dot" :class="`activity-${activity.tone ?? 'info'}`" />
-              <div>
-                <strong>{{ activity.summary }}</strong>
-                <p>{{ activity.detail ?? activity.kind }}</p>
+          <template v-for="row in timelineRows" :key="row.id">
+            <article
+              v-if="row.kind === 'message'"
+              class="message"
+              :class="`message-${row.message.role}`"
+            >
+              <div v-if="row.message.role !== 'user'" class="avatar" aria-hidden="true">
+                {{ row.message.avatar }}
+              </div>
+              <div class="message-body">
+                <p v-if="row.message.role !== 'assistant'" class="message-author">
+                  {{ row.message.author }}
+                </p>
+                <MobileMarkdown
+                  class="message-markdown"
+                  :streaming="row.message.streaming"
+                  :text="row.message.text || emptyMessageLabel(row.message)"
+                />
+                <div v-if="row.changedFiles.length > 0" class="changed-files-chip">
+                  <span
+                    >{{ row.changedFiles.length }} changed file{{
+                      row.changedFiles.length === 1 ? "" : "s"
+                    }}</span
+                  >
+                  <button type="button" @click="openTool('diff')">View diff</button>
+                </div>
+                <p v-if="messageMeta(row)" class="message-meta">{{ messageMeta(row) }}</p>
               </div>
             </article>
-          </section>
+
+            <article v-else-if="row.kind === 'work'" class="work-group">
+              <div class="work-header">
+                <span>Work log</span>
+                <span v-if="row.hiddenCount > 0">+{{ row.hiddenCount }} earlier</span>
+              </div>
+              <div class="work-entries">
+                <div v-for="entry in row.entries" :key="entry.id" class="work-entry">
+                  <span class="activity-dot" :class="`activity-${entry.tone}`" />
+                  <div>
+                    <strong>{{ entry.label }}</strong>
+                    <p v-if="entry.command" class="work-command">{{ entry.command }}</p>
+                    <p v-else-if="entry.detail">{{ entry.detail }}</p>
+                    <p v-if="entry.changedFiles.length > 0" class="work-files">
+                      {{ entry.changedFiles.join(", ") }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article v-else-if="row.kind === 'proposed-plan'" class="plan-card">
+              <p class="eyebrow">Plan</p>
+              <p>{{ row.proposedPlan.planMarkdown }}</p>
+            </article>
+
+            <article v-else class="working-row">
+              <span class="typing-dots" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+              <span>{{ workingLabel(row.createdAt) }}</span>
+            </article>
+          </template>
         </section>
       </main>
     </ion-content>
@@ -320,7 +361,14 @@
             <span v-if="activeDiff.binary">Binary content</span>
           </div>
           <ion-list v-if="activeDiff?.files.length" lines="full" class="diff-files">
-            <ion-item v-for="file in activeDiff.files" :key="file.path">
+            <ion-item
+              v-for="file in activeDiff.files"
+              :key="file.path"
+              button
+              :detail="false"
+              :class="{ selected: selectedDiffPath === file.path }"
+              @click="selectDiffFile(file.path)"
+            >
               <ion-label>
                 <h2>{{ file.path }}</h2>
                 <p>
@@ -335,7 +383,24 @@
           <p v-else-if="activeDiff?.empty" class="empty-thread-note">
             No diff is available for this checkpoint range.
           </p>
-          <pre v-else-if="activeDiff" class="diff-preview"><code>{{ activeDiff.diff }}</code></pre>
+          <section v-else-if="activeDiff" class="code-preview" aria-label="Code diff preview">
+            <header class="code-preview-header">
+              <div>
+                <p class="eyebrow">File preview</p>
+                <h3>{{ selectedDiffBlock?.path ?? "Unified diff" }}</h3>
+              </div>
+              <p v-if="selectedDiffBlock">
+                <span class="diff-add">+{{ selectedDiffBlock.additions }}</span>
+                <span class="diff-del">-{{ selectedDiffBlock.deletions }}</span>
+              </p>
+            </header>
+            <pre class="diff-preview"><code><span
+              v-for="line in diffPreviewLines"
+              :key="line.id"
+              class="diff-line"
+              :class="`diff-line-${line.type}`"
+            >{{ line.text || " " }}</span></code></pre>
+          </section>
           <p v-else class="empty-thread-note">Select a thread with completed checkpoints.</p>
         </section>
 
@@ -456,12 +521,52 @@
               Up
             </ion-button>
           </div>
+          <div class="project-search-panel">
+            <p class="eyebrow">Project files</p>
+            <div class="path-controls">
+              <ion-input
+                aria-label="Search project files"
+                class="path-input"
+                placeholder="Search files or folders"
+                :value="projectEntrySearchInput"
+                @ionInput="onProjectEntrySearchInput"
+              />
+              <ion-button size="small" shape="round" @click="searchProjectEntries">
+                Search
+              </ion-button>
+            </div>
+            <p class="sheet-note">
+              The original backend exposes file paths here. Changed files open in the diff code
+              preview.
+            </p>
+          </div>
           <div class="git-actions">
             <ion-button size="small" shape="round" :disabled="!filePathInput" @click="addProject">
               Add project
             </ion-button>
           </div>
           <p v-if="filesError" class="command-error" role="alert">{{ filesError }}</p>
+          <ion-list v-if="projectEntries.length" lines="full" class="file-list">
+            <ion-item
+              v-for="entry in projectEntries"
+              :key="entry.path"
+              button
+              :detail="false"
+              @click="openProjectEntry(entry)"
+            >
+              <ion-icon
+                slot="start"
+                :icon="entry.kind === 'directory' ? folderOpenOutline : documentTextOutline"
+              />
+              <ion-label>
+                <h2>{{ entry.path }}</h2>
+                <p>{{ entry.kind }}{{ entry.parentPath ? ` · ${entry.parentPath}` : "" }}</p>
+              </ion-label>
+            </ion-item>
+          </ion-list>
+          <p v-if="projectEntriesTruncated" class="sheet-note">
+            Search results are truncated. Narrow the query to find a specific file.
+          </p>
           <ion-list v-if="fileEntries.length" lines="full" class="file-list">
             <ion-item
               v-for="entry in fileEntries"
@@ -662,6 +767,7 @@ import {
   arrowUpOutline,
   chevronDownOutline,
   codeSlashOutline,
+  documentTextOutline,
   ellipsisHorizontalOutline,
   folderOpenOutline,
   hardwareChipOutline,
@@ -688,6 +794,8 @@ import { useConnectionState } from "@/client/connectionState";
 import {
   loadMobileFullThreadDiff,
   loadMobileTurnDiff,
+  parseUnifiedDiffLines,
+  type MobileDiffLine,
   type MobileUnifiedDiff,
 } from "@/client/mobileDiff";
 import {
@@ -696,7 +804,9 @@ import {
   inferMobileProjectTitle,
   isLikelyRemoteUrl,
   lookupMobileRepository,
+  searchMobileProjectEntries,
   type MobileFilesystemEntry,
+  type MobileProjectEntry,
   type MobileRepositoryInfo,
 } from "@/client/mobileFiles";
 import {
@@ -736,7 +846,13 @@ import {
   type MobileRuntimeMode,
 } from "@/client/mobileModelControls";
 import { useMobileShellState } from "@/client/mobileShell";
-import { useMobileThreadState } from "@/client/mobileThread";
+import { useMobileThreadState, type MobileThreadMessage } from "@/client/mobileThread";
+import {
+  deriveMobileTimelineRows,
+  formatRelativeTime,
+  type MobileTimelineRow,
+} from "@/client/mobileTimeline";
+import MobileMarkdown from "./MobileMarkdown.vue";
 
 const {
   bearerSession,
@@ -759,8 +875,6 @@ const {
   startThreadSync,
   stopThreadSync,
   threadSync,
-  visibleActivities,
-  visibleMessages,
 } = useMobileThreadState();
 
 type ToolId = "diff" | "git" | "files" | "terminal" | "approvals" | "connection";
@@ -812,6 +926,7 @@ const draftModelSelection = ref<MobileModelSelection | null>(null);
 const draftRuntimeMode = ref<MobileRuntimeMode | null>(null);
 const draftInteractionMode = ref<MobileInteractionMode | null>(null);
 const activeDiff = ref<MobileUnifiedDiff | null>(null);
+const selectedDiffPath = ref<string | null>(null);
 const diffLoading = ref(false);
 const diffError = ref<string | null>(null);
 const diffMode = ref<"full" | "latest">("full");
@@ -825,6 +940,9 @@ const gitCommitMessage = ref("");
 const filePathInput = ref("");
 const fileEntries = ref<readonly MobileFilesystemEntry[]>([]);
 const fileParentPath = ref("");
+const projectEntrySearchInput = ref("");
+const projectEntries = ref<readonly MobileProjectEntry[]>([]);
+const projectEntriesTruncated = ref(false);
 const filesLoading = ref(false);
 const filesError = ref<string | null>(null);
 const cloneRepositoryInput = ref("");
@@ -836,7 +954,8 @@ const terminalLoading = ref(false);
 const terminalError = ref<string | null>(null);
 let stopGitStatusSubscription: (() => void) | null = null;
 let stopTerminalSubscription: (() => void) | null = null;
-const messages = computed(() => visibleMessages.value);
+const chatContent = ref<InstanceType<typeof IonContent> | null>(null);
+const timelineRows = computed(() => deriveMobileTimelineRows(activeThreadDetail.value));
 
 const activeDraftRef = computed<ComposerDraftRef>(() => ({
   backendUrl: pairedBackendUrl.value ?? selectedBackend.value?.candidate.url ?? "unpaired",
@@ -919,6 +1038,15 @@ const threadEmptyCopy = computed(() => {
   if (threadSync.value.status === "failed") return threadSync.value.message;
   return "No messages in this thread yet.";
 });
+const timelineScrollKey = computed(() =>
+  timelineRows.value
+    .map((row) =>
+      row.kind === "message"
+        ? `${row.id}:${row.message.text.length}:${row.message.streaming ? "streaming" : "done"}`
+        : row.id,
+    )
+    .join("|"),
+);
 const commandSession = computed(() => {
   if (!pairedBackendUrl.value || !bearerSession.value) return null;
   return {
@@ -970,6 +1098,19 @@ const diffStatusText = computed(() => {
   if (!activeDiff.value) return "Load a checkpoint diff for this thread.";
   if (activeDiff.value.empty) return "The selected range has no file changes.";
   return `${activeDiff.value.files.length} changed file${activeDiff.value.files.length === 1 ? "" : "s"}.`;
+});
+const selectedDiffBlock = computed(() => {
+  const diff = activeDiff.value;
+  if (!diff || diff.fileBlocks.length === 0) return null;
+  return (
+    diff.fileBlocks.find((file) => file.path === selectedDiffPath.value) ??
+    diff.fileBlocks[0] ??
+    null
+  );
+});
+const diffPreviewLines = computed<readonly MobileDiffLine[]>(() => {
+  if (selectedDiffBlock.value) return selectedDiffBlock.value.lines;
+  return activeDiff.value ? parseUnifiedDiffLines(activeDiff.value.diff) : [];
 });
 const gitCwd = computed(
   () => activeThread.value?.worktreePath ?? activeProject.value?.workspaceRoot,
@@ -1097,6 +1238,21 @@ const openTool = (tool: ToolId) => {
   if (tool === "git") void startGitTool();
   if (tool === "files") initializeFilesTool();
   if (tool === "terminal") void startTerminalTool();
+};
+
+const emptyMessageLabel = (message: MobileThreadMessage) =>
+  message.streaming ? "" : "(empty response)";
+
+const messageMeta = (row: Extract<MobileTimelineRow, { readonly kind: "message" }>) => {
+  const timestamp = formatRelativeTime(row.message.createdAt);
+  if (row.message.streaming) return timestamp ? `${timestamp} · streaming` : "streaming";
+  if (row.durationLabel && timestamp) return `${timestamp} · ${row.durationLabel}`;
+  return timestamp;
+};
+
+const workingLabel = (createdAt: string | null) => {
+  const timestamp = formatRelativeTime(createdAt);
+  return timestamp ? `Working · ${timestamp}` : "Working";
 };
 
 const sendComposerMessage = async () => {
@@ -1274,6 +1430,10 @@ const onDiffWhitespaceToggle = (event: { detail: { checked?: boolean } }) => {
   void loadFullThreadDiff();
 };
 
+const selectDiffFile = (path: string) => {
+  selectedDiffPath.value = path;
+};
+
 const onGitCommitInput = (event: { detail: { value?: string | null } }) => {
   gitCommitMessage.value = event.detail.value ?? "";
 };
@@ -1383,13 +1543,19 @@ const initializeFilesTool = () => {
     filePathInput.value =
       activeProject.value?.workspaceRoot ?? activeThread.value?.worktreePath ?? "~/";
   }
+  if (!projectEntrySearchInput.value.trim()) projectEntrySearchInput.value = ".";
   if (!cloneDestinationInput.value.trim()) {
     cloneDestinationInput.value = filePathInput.value.trim();
   }
+  if (projectEntries.value.length === 0 && gitCwd.value) void searchProjectEntries();
 };
 
 const onFilePathInput = (event: { detail: { value?: string | null } }) => {
   filePathInput.value = event.detail.value ?? "";
+};
+
+const onProjectEntrySearchInput = (event: { detail: { value?: string | null } }) => {
+  projectEntrySearchInput.value = event.detail.value ?? "";
 };
 
 const onCloneRepositoryInput = (event: { detail: { value?: string | null } }) => {
@@ -1442,6 +1608,64 @@ const browseParentPath = async () => {
   filePathInput.value = parent || "/";
   await browseFilePath();
 };
+
+const searchProjectEntries = async () => {
+  const session = commandSession.value;
+  const cwd = gitCwd.value;
+  if (!session || !cwd) {
+    filesError.value = "Select a paired project before searching files.";
+    return;
+  }
+  filesLoading.value = true;
+  filesError.value = null;
+  try {
+    const result = await searchMobileProjectEntries({
+      cwd,
+      query: projectEntrySearchInput.value,
+      session,
+    });
+    projectEntries.value = result.entries;
+    projectEntriesTruncated.value = result.truncated;
+  } catch (error) {
+    filesError.value = error instanceof Error ? error.message : "Project file search failed.";
+    projectEntries.value = [];
+    projectEntriesTruncated.value = false;
+  } finally {
+    filesLoading.value = false;
+  }
+};
+
+const openProjectEntry = async (entry: MobileProjectEntry) => {
+  if (entry.kind === "directory") {
+    filePathInput.value = `${entry.path.replace(/[/\\]+$/, "")}/`;
+    await browseFilePath();
+    return;
+  }
+  let path = findDiffPath(entry.path);
+  if (!path && latestDiffSummary.value) {
+    await loadFullThreadDiff();
+    path = findDiffPath(entry.path);
+  }
+  if (path) {
+    activeTool.value = "diff";
+    selectedDiffPath.value = path;
+    return;
+  }
+  filesError.value =
+    "This backend exposes the project file index but not mobile file reads. Changed files can be previewed from Diff.";
+};
+
+const findDiffPath = (path: string) => {
+  const normalized = normalizeRelativePath(path);
+  return (
+    activeDiff.value?.files.find((file) => {
+      const filePath = normalizeRelativePath(file.path);
+      return filePath === normalized || filePath.endsWith(`/${normalized}`);
+    })?.path ?? null
+  );
+};
+
+const normalizeRelativePath = (path: string) => path.replace(/\\/g, "/").replace(/^\.?\//, "");
 
 const addProject = async () => {
   const workspaceRoot = filePathInput.value.trim();
@@ -1875,6 +2099,8 @@ watch(
     gitStatus.value = null;
     gitProgress.value = [];
     gitError.value = null;
+    projectEntries.value = [];
+    projectEntriesTruncated.value = false;
     stopGitTool();
     terminalState.value = createEmptyMobileTerminalState(activeThreadId.value ?? "");
     terminalInput.value = "";
@@ -1882,6 +2108,20 @@ watch(
     stopTerminalTool();
     commandError.value = null;
   },
+);
+
+watch(activeDiff, (diff) => {
+  selectedDiffPath.value = diff?.files[0]?.path ?? null;
+});
+
+watch(
+  timelineScrollKey,
+  () => {
+    globalThis.requestAnimationFrame(() => {
+      void chatContent.value?.$el?.scrollToBottom?.(180);
+    });
+  },
+  { flush: "post" },
 );
 
 watch(
@@ -2194,17 +2434,11 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 }
 
 .message-user {
-  grid-template-columns: minmax(0, 1fr) 2rem;
-}
-
-.message-user .avatar {
-  grid-column: 2;
-  grid-row: 1;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: end;
 }
 
 .message-user .message-body {
-  grid-column: 1;
-  grid-row: 1;
   justify-self: end;
 }
 
@@ -2248,10 +2482,156 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
   line-height: 1.5;
 }
 
-.activity-feed {
+.message-text {
+  overflow-wrap: anywhere;
+}
+
+.message-markdown {
+  color: var(--ion-text-color);
+}
+
+.message-user .message-markdown {
+  max-width: 100%;
+}
+
+.message-meta {
+  margin-top: 0.45rem !important;
+  color: var(--ion-color-medium) !important;
+  font-size: 0.72rem;
+}
+
+.changed-files-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.65rem;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: 0.75rem;
+  background: var(--t3-panel-background);
+  padding: 0.55rem 0.7rem;
+  color: var(--ion-color-medium);
+  font-size: 0.78rem;
+}
+
+.changed-files-chip button {
+  border: 0;
+  background: transparent;
+  color: var(--ion-color-primary);
+  font: inherit;
+  font-weight: 700;
+}
+
+.work-group {
   display: grid;
   gap: 0.65rem;
-  margin-top: 0.5rem;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: 1rem;
+  background: var(--t3-panel-background);
+  padding: 0.75rem;
+}
+
+.work-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--ion-color-medium);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.work-entries {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.work-entry {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: start;
+  min-width: 0;
+}
+
+.work-entry strong {
+  display: block;
+  font-size: 0.86rem;
+}
+
+.work-entry p {
+  margin: 0.15rem 0 0;
+  color: var(--ion-color-medium);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.work-command {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+}
+
+.work-files {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plan-card {
+  border: 1px solid var(--t3-panel-border);
+  border-radius: 1rem;
+  background: var(--t3-panel-background);
+  padding: 0.9rem;
+}
+
+.plan-card p:last-child {
+  margin: 0.35rem 0 0;
+  white-space: pre-wrap;
+}
+
+.working-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.25rem 0.35rem;
+  color: var(--ion-color-medium);
+  font-size: 0.82rem;
+}
+
+.typing-dots {
+  display: inline-flex;
+  gap: 0.2rem;
+}
+
+.typing-dots span {
+  width: 0.32rem;
+  height: 0.32rem;
+  border-radius: 999px;
+  background: currentColor;
+  animation: typingPulse 1s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typingPulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.28;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 0.9;
+    transform: translateY(-0.12rem);
+  }
 }
 
 .activity-dot {
@@ -2524,6 +2904,13 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 .git-files h2 {
   font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diff-files ion-item.selected {
+  --background: color-mix(in srgb, var(--ion-color-primary) 10%, var(--t3-panel-background));
 }
 
 .git-progress h2 {
@@ -2559,13 +2946,51 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
   min-height: 2.35rem;
 }
 
-.clone-panel {
+.clone-panel,
+.project-search-panel {
   display: grid;
   gap: 0.65rem;
   border: 1px solid var(--t3-panel-border);
   border-radius: var(--t3-panel-radius);
   background: var(--t3-panel-background);
   padding: 0.9rem;
+}
+
+.code-preview {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: var(--t3-panel-radius);
+  background: var(--t3-panel-background);
+}
+
+.code-preview-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--t3-panel-border);
+  padding: 0.75rem 0.9rem;
+}
+
+.code-preview-header h3,
+.code-preview-header p {
+  margin: 0;
+}
+
+.code-preview-header h3 {
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.84rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.code-preview-header p:not(.eyebrow) {
+  display: inline-flex;
+  gap: 0.45rem;
+  color: var(--ion-color-medium);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
 }
 
 .diff-preview,
@@ -2580,18 +3005,45 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 }
 
 .diff-preview {
-  padding: 0.9rem;
+  max-height: min(60vh, 38rem);
+  border: 0;
+  border-radius: 0;
   background: var(--t3-panel-background);
 }
 
 .diff-preview code {
   display: grid;
-  gap: 0.1rem;
+  min-width: max-content;
 }
 
-.diff-file {
+.diff-line {
+  display: block;
+  min-height: 1.35rem;
+  padding: 0.02rem 0.85rem;
+  white-space: pre;
+}
+
+.diff-line-file {
   color: var(--ion-color-primary);
   font-weight: 700;
+}
+
+.diff-line-hunk {
+  background: color-mix(in srgb, var(--ion-color-primary) 10%, transparent);
+  color: var(--ion-color-primary);
+}
+
+.diff-line-add {
+  background: color-mix(in srgb, var(--ion-color-success) 10%, transparent);
+}
+
+.diff-line-del {
+  background: color-mix(in srgb, var(--ion-color-danger) 10%, transparent);
+}
+
+.diff-line-meta,
+.diff-line-context {
+  color: var(--ion-color-medium);
 }
 
 .diff-add {

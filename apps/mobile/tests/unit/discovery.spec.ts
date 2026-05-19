@@ -39,10 +39,15 @@ describe("mobile backend discovery", () => {
     const candidates = androidCandidates();
 
     expect(candidates[0]).toMatchObject({
+      url: "http://192.168.0.152:3773",
+      source: "lan",
+    });
+    expect(candidates[1]).toMatchObject({
       url: "http://10.0.2.2:3773",
       source: "emulator",
     });
     expect(candidates.map((candidate) => candidate.url)).toEqual([
+      "http://192.168.0.152:3773",
       "http://10.0.2.2:3773",
       "http://127.0.0.1:3773",
       "http://localhost:3773",
@@ -52,7 +57,7 @@ describe("mobile backend discovery", () => {
   test("adds desktop browser defaults", () => {
     expect(
       generateBackendCandidates({ platform: "web" }).map((candidate) => candidate.url),
-    ).toEqual(["http://127.0.0.1:3773", "http://localhost:3773"]);
+    ).toEqual(["http://192.168.0.152:3773", "http://127.0.0.1:3773", "http://localhost:3773"]);
   });
 
   test("accepts unauthenticated T3 auth session responses", async () => {

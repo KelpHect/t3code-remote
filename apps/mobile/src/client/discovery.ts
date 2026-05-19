@@ -41,6 +41,7 @@ interface SessionPayload {
 }
 
 const DEFAULT_PORT = "3773";
+const DEVELOPMENT_DESKTOP_BACKEND_URL = "http://192.168.0.152:3773";
 const DEFAULT_TIMEOUT_MS = 1500;
 
 const PRIVATE_HOSTNAME_SUFFIXES = [".local"];
@@ -128,6 +129,8 @@ export function generateBackendCandidates(options?: {
       label,
     });
   };
+
+  add(DEVELOPMENT_DESKTOP_BACKEND_URL, "lan", "Development desktop IPv4");
 
   if (platform === "android") {
     add(`http://10.0.2.2:${DEFAULT_PORT}`, "emulator", "Android emulator host");

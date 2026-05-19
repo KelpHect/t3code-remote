@@ -22,7 +22,56 @@ describe("mobile auth client", () => {
         pairingInput: "http://127.0.0.1:3773/pair#token=pairing-token",
       }),
     ).toEqual({
-      backendUrl: "http://127.0.0.1:3773",
+      backendUrl: "http://10.0.2.2:3773",
+      credential: "pairing-token",
+    });
+  });
+
+  test("keeps a discovered emulator backend when a pasted pairing URL uses desktop loopback", () => {
+    expect(
+      resolvePairingTarget({
+        backendUrl: "http://10.0.2.2:3773",
+        pairingInput: "http://127.0.0.1:3773/pair#token=pairing-token",
+      }),
+    ).toEqual({
+      backendUrl: "http://10.0.2.2:3773",
+      credential: "pairing-token",
+    });
+  });
+
+  test("keeps a discovered LAN backend when a pasted pairing URL uses localhost", () => {
+    expect(
+      resolvePairingTarget({
+        backendUrl: "http://192.168.0.152:3773",
+        pairingInput: "http://localhost:3773/pair#token=pairing-token",
+      }),
+    ).toEqual({
+      backendUrl: "http://192.168.0.152:3773",
+      credential: "pairing-token",
+    });
+  });
+
+  test("uses the pairing URL host when it is reachable from another device", () => {
+    expect(
+      resolvePairingTarget({
+        backendUrl: "http://10.0.2.2:3773",
+        pairingInput: "http://192.168.0.152:3773/pair#token=pairing-token",
+      }),
+    ).toEqual({
+      backendUrl: "http://192.168.0.152:3773",
+      credential: "pairing-token",
+    });
+  });
+
+  test("extracts hosted pairing backend URLs from the host query parameter", () => {
+    expect(
+      resolvePairingTarget({
+        backendUrl: "http://10.0.2.2:3773",
+        pairingInput:
+          "https://app.t3.codes/pair?host=http%3A%2F%2F10.0.2.2%3A3773#token=pairing-token",
+      }),
+    ).toEqual({
+      backendUrl: "http://10.0.2.2:3773",
       credential: "pairing-token",
     });
   });

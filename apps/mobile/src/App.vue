@@ -121,15 +121,8 @@ import { useConnectionState } from "@/client/connectionState";
 import { type MobileShellThread, useMobileShellState } from "@/client/mobileShell";
 import { defaultSecretStore, loadAuthSession } from "@/client/secretStore";
 
-const {
-  bearerSession,
-  pairedBackendUrl,
-  selectedBackend,
-  setAuthSession,
-  startDiscoveryLoop,
-  statusDetail,
-  stopDiscoveryLoop,
-} = useConnectionState();
+const { bearerSession, pairedBackendUrl, selectedBackend, setAuthSession, statusDetail } =
+  useConnectionState();
 const { activeThreadId, projects, selectThread, shellSync, startShellSync, stopShellSync } =
   useMobileShellState();
 
@@ -154,11 +147,9 @@ onMounted(() => {
       webSocketToken: session.webSocketToken,
     });
   });
-  startDiscoveryLoop();
 });
 
 onUnmounted(() => {
-  stopDiscoveryLoop();
   stopShellSync();
 });
 

@@ -86,6 +86,10 @@ export class ExistingBackendClient {
     return this.transport.request<unknown>("filesystem.browse", input);
   }
 
+  searchProjectEntries(input: Record<string, unknown>) {
+    return this.transport.request<unknown>("projects.searchEntries", input);
+  }
+
   lookupRepository(input: Record<string, unknown>) {
     return this.transport.request<unknown>("sourceControl.lookupRepository", input);
   }
