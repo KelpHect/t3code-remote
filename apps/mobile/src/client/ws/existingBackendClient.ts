@@ -59,6 +59,29 @@ export class ExistingBackendClient {
     return this.transport.request<unknown>("orchestration.getFullThreadDiff", input);
   }
 
+  refreshVcsStatus(cwd: string) {
+    return this.transport.request<unknown>("vcs.refreshStatus", { cwd });
+  }
+
+  subscribeVcsStatus(
+    cwd: string,
+    listener: (item: unknown) => void,
+    options?: { readonly onError?: () => void },
+  ) {
+    return this.transport.subscribe("subscribeVcsStatus", { cwd }, listener, {
+      onComplete: options?.onError,
+      onError: options?.onError,
+    });
+  }
+
+  async runStackedAction(
+    input: Record<string, unknown>,
+    listener: (item: unknown) => void,
+    options?: { readonly signal?: AbortSignal },
+  ) {
+    return this.transport.requestStream("git.runStackedAction", input, listener, options);
+  }
+
   getConfig() {
     return this.transport.request<unknown>("server.getConfig", {});
   }

@@ -340,27 +340,95 @@
         </section>
 
         <section v-else-if="activeTool === 'git'" class="tool-workspace">
+          <div class="git-toolbar">
+            <div>
+              <p class="eyebrow">Repository</p>
+              <h2>{{ gitBranchLabel }}</h2>
+              <p>{{ gitStatusText }}</p>
+            </div>
+            <ion-spinner v-if="gitLoading || gitActionRunning" name="crescent" />
+          </div>
           <div class="status-grid">
             <div class="status-card">
               <strong>Modified</strong>
-              <span>4</span>
+              <span>{{ gitStatus?.files.length ?? 0 }}</span>
             </div>
             <div class="status-card">
-              <strong>Branch</strong>
-              <span>main</span>
+              <strong>Ahead / behind</strong>
+              <span>{{ gitStatus?.ahead ?? 0 }} / {{ gitStatus?.behind ?? 0 }}</span>
             </div>
           </div>
-          <ion-list lines="full">
-            <ion-item>
+          <div class="git-actions">
+            <ion-button size="small" shape="round" :disabled="!gitCwd" @click="refreshGitStatus">
+              Refresh
+            </ion-button>
+            <ion-button
+              fill="outline"
+              size="small"
+              shape="round"
+              :disabled="!canRunGitAction"
+              @click="runGitAction('commit')"
+            >
+              Commit
+            </ion-button>
+            <ion-button
+              fill="outline"
+              size="small"
+              shape="round"
+              :disabled="!canRunGitAction"
+              @click="runGitAction('push')"
+            >
+              Push
+            </ion-button>
+            <ion-button
+              fill="outline"
+              size="small"
+              shape="round"
+              :disabled="!canRunGitAction"
+              @click="runGitAction('commit_push')"
+            >
+              Commit + push
+            </ion-button>
+            <ion-button
+              fill="outline"
+              size="small"
+              shape="round"
+              :disabled="!canRunGitAction"
+              @click="runGitAction('create_pr')"
+            >
+              PR prep
+            </ion-button>
+          </div>
+          <ion-textarea
+            aria-label="Commit message"
+            auto-grow
+            class="git-commit-message"
+            placeholder="Commit message"
+            :rows="2"
+            :value="gitCommitMessage"
+            @ionInput="onGitCommitInput"
+          />
+          <p v-if="gitError" class="command-error" role="alert">{{ gitError }}</p>
+          <ion-list v-if="gitStatus?.files.length" lines="full" class="git-files">
+            <ion-item v-for="file in gitStatus.files" :key="file.path">
               <ion-label>
-                <h2>Commit mobile UI polish</h2>
-                <p>Ready once validation passes.</p>
+                <h2>{{ file.path }}</h2>
+                <p>
+                  <span class="diff-add">+{{ file.insertions }}</span>
+                  <span class="diff-del">-{{ file.deletions }}</span>
+                  <span v-if="file.status"> {{ file.status }}</span>
+                </p>
               </ion-label>
             </ion-item>
-            <ion-item>
+          </ion-list>
+          <p v-else class="empty-thread-note">{{ gitEmptyText }}</p>
+          <ion-list v-if="gitProgress.length" lines="full" class="git-progress">
+            <ion-item v-for="entry in gitProgress" :key="entry.id">
+              <span slot="start" class="activity-dot" :class="`progress-${entry.tone}`" />
               <ion-label>
-                <h2>Push to origin/main</h2>
-                <p>Runs after each completed TODO task.</p>
+                <h2>{{ entry.label }}</h2>
+                <p v-if="entry.detail">{{ entry.detail }}</p>
+                <p v-else>{{ entry.kind }}</p>
               </ion-label>
             </ion-item>
           </ion-list>
@@ -494,6 +562,14 @@ import {
   type MobileUnifiedDiff,
 } from "@/client/mobileDiff";
 import {
+  refreshMobileGitStatus,
+  runMobileGitAction,
+  startMobileGitStatusSubscription,
+  type MobileGitAction,
+  type MobileGitProgressEntry,
+  type MobileGitStatus,
+} from "@/client/mobileGit";
+import {
   formatMobileModelSelection,
   loadMobileModelChoices,
   mobileInteractionModeOptions,
@@ -605,6 +681,13 @@ const diffLoading = ref(false);
 const diffError = ref<string | null>(null);
 const diffMode = ref<"full" | "latest">("full");
 const diffIgnoreWhitespace = ref(false);
+const gitStatus = ref<MobileGitStatus | null>(null);
+const gitProgress = ref<readonly MobileGitProgressEntry[]>([]);
+const gitLoading = ref(false);
+const gitActionRunning = ref(false);
+const gitError = ref<string | null>(null);
+const gitCommitMessage = ref("");
+let stopGitStatusSubscription: (() => void) | null = null;
 const messages = computed(() => visibleMessages.value);
 
 const activeDraftRef = computed<ComposerDraftRef>(() => ({
@@ -740,6 +823,41 @@ const diffStatusText = computed(() => {
   if (activeDiff.value.empty) return "The selected range has no file changes.";
   return `${activeDiff.value.files.length} changed file${activeDiff.value.files.length === 1 ? "" : "s"}.`;
 });
+const gitCwd = computed(
+  () => activeThread.value?.worktreePath ?? activeProject.value?.workspaceRoot,
+);
+const gitBranchLabel = computed(() => {
+  if (!gitCwd.value) return "No repository selected";
+  if (!gitStatus.value) return "Loading status";
+  if (!gitStatus.value.isRepo) return "Not a git repository";
+  return gitStatus.value.branch ?? "Detached HEAD";
+});
+const gitStatusText = computed(() => {
+  if (!gitCwd.value) return "Select a project or thread with a desktop worktree.";
+  if (gitLoading.value) return "Refreshing git status from the desktop backend.";
+  if (gitActionRunning.value) return "Git action is running on the desktop backend.";
+  if (gitError.value) return gitError.value;
+  if (!gitStatus.value) return "Open the git sheet to subscribe to repository status.";
+  if (!gitStatus.value.isRepo) return `${gitCwd.value} is not a git repository.`;
+  const changeText = gitStatus.value.hasChanges
+    ? `${gitStatus.value.files.length} changed file${gitStatus.value.files.length === 1 ? "" : "s"}`
+    : "Working tree clean";
+  const remoteText = gitStatus.value.hasPrimaryRemote
+    ? `${gitStatus.value.ahead} ahead, ${gitStatus.value.behind} behind`
+    : "No primary remote";
+  return `${changeText}. ${remoteText}.`;
+});
+const gitEmptyText = computed(() => {
+  if (!gitCwd.value) return "No project path is available for git.";
+  if (!gitStatus.value) return "Refresh git status to view repository changes.";
+  if (!gitStatus.value.isRepo) return "This path is not a git repository.";
+  return "Working tree clean.";
+});
+const canRunGitAction = computed(
+  () =>
+    Boolean(commandSession.value && gitCwd.value && gitStatus.value?.isRepo) &&
+    !gitActionRunning.value,
+);
 
 const activeToolDetails = computed(() => {
   if (!activeTool.value) {
@@ -775,6 +893,7 @@ const openTool = (tool: ToolId) => {
   activeTool.value = tool;
   toolsOpen.value = false;
   if (tool === "diff") void loadFullThreadDiff();
+  if (tool === "git") void startGitTool();
 };
 
 const sendComposerMessage = async () => {
@@ -952,6 +1071,109 @@ const onDiffWhitespaceToggle = (event: { detail: { checked?: boolean } }) => {
   void loadFullThreadDiff();
 };
 
+const onGitCommitInput = (event: { detail: { value?: string | null } }) => {
+  gitCommitMessage.value = event.detail.value ?? "";
+};
+
+const startGitTool = async () => {
+  stopGitTool();
+  gitError.value = null;
+  gitProgress.value = [];
+  const session = commandSession.value;
+  const cwd = gitCwd.value;
+  if (!session || !cwd) {
+    gitStatus.value = null;
+    gitError.value = "Select a paired project or thread before using git.";
+    return;
+  }
+  gitLoading.value = true;
+  try {
+    gitStatus.value = await refreshMobileGitStatus({ cwd, session });
+    stopGitStatusSubscription = await startMobileGitStatusSubscription({
+      cwd,
+      onError: (error) => {
+        gitError.value = error.message;
+      },
+      onStatus: (status) => {
+        gitStatus.value = status;
+        gitError.value = null;
+      },
+      session,
+    });
+  } catch (error) {
+    gitError.value = error instanceof Error ? error.message : "Git status failed.";
+  } finally {
+    gitLoading.value = false;
+  }
+};
+
+const refreshGitStatus = async () => {
+  const session = commandSession.value;
+  const cwd = gitCwd.value;
+  if (!session || !cwd) {
+    gitError.value = "Select a paired project or thread before refreshing git.";
+    return;
+  }
+  gitLoading.value = true;
+  gitError.value = null;
+  try {
+    gitStatus.value = await refreshMobileGitStatus({ cwd, session });
+  } catch (error) {
+    gitError.value = error instanceof Error ? error.message : "Git status failed.";
+  } finally {
+    gitLoading.value = false;
+  }
+};
+
+const runGitAction = async (action: MobileGitAction) => {
+  const session = commandSession.value;
+  const cwd = gitCwd.value;
+  if (!session || !cwd) {
+    gitError.value = "Select a paired project or thread before running git.";
+    return;
+  }
+  if ((action === "commit" || action === "commit_push") && !gitCommitMessage.value.trim()) {
+    gitError.value = "Enter a commit message before committing.";
+    return;
+  }
+  gitActionRunning.value = true;
+  gitError.value = null;
+  gitProgress.value = [];
+  try {
+    const result = await runMobileGitAction({
+      action,
+      commitMessage: gitCommitMessage.value,
+      cwd,
+      onProgress: appendGitProgress,
+      session,
+    });
+    appendGitProgress({
+      action: result.action,
+      actionId: `mobile-result-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      detail: result.description ?? result.prUrl,
+      id: `mobile-result-${Date.now()}`,
+      kind: "action_finished",
+      label: result.title,
+      tone: "success",
+    });
+    await refreshGitStatus();
+  } catch (error) {
+    gitError.value = error instanceof Error ? error.message : "Git action failed.";
+  } finally {
+    gitActionRunning.value = false;
+  }
+};
+
+const appendGitProgress = (entry: MobileGitProgressEntry) => {
+  gitProgress.value = [...gitProgress.value, entry].slice(-80);
+};
+
+const stopGitTool = () => {
+  stopGitStatusSubscription?.();
+  stopGitStatusSubscription = null;
+};
+
 const applyModelSelection = async (selection: MobileModelSelection) => {
   if (sameMobileModelSelection(selection, activeModelSelection.value)) return;
   draftModelSelection.value = selection;
@@ -1110,6 +1332,10 @@ watch(
     draftInteractionMode.value = null;
     activeDiff.value = null;
     diffError.value = null;
+    gitStatus.value = null;
+    gitProgress.value = [];
+    gitError.value = null;
+    stopGitTool();
     commandError.value = null;
   },
 );
@@ -1136,6 +1362,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   stopThreadSync();
+  stopGitTool();
   flushComposerDraft();
   if (typeof globalThis.document === "undefined") return;
   globalThis.document.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -1502,6 +1729,22 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
   background: var(--ion-color-danger);
 }
 
+.progress-info {
+  background: var(--ion-color-primary);
+}
+
+.progress-success {
+  background: var(--ion-color-success);
+}
+
+.progress-warning {
+  background: var(--ion-color-warning);
+}
+
+.progress-danger {
+  background: var(--ion-color-danger);
+}
+
 .sheet-content {
   --padding-bottom: 1rem;
 }
@@ -1637,7 +1880,8 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
   font-size: 0.9rem;
 }
 
-.diff-toolbar {
+.diff-toolbar,
+.git-toolbar {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1649,29 +1893,35 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 }
 
 .diff-toolbar h2,
-.diff-toolbar p {
+.diff-toolbar p,
+.git-toolbar h2,
+.git-toolbar p {
   margin: 0;
 }
 
-.diff-toolbar h2 {
+.diff-toolbar h2,
+.git-toolbar h2 {
   font-size: 1.25rem;
   line-height: 1.2;
 }
 
-.diff-toolbar p:not(.eyebrow) {
+.diff-toolbar p:not(.eyebrow),
+.git-toolbar p:not(.eyebrow) {
   color: var(--ion-color-medium);
   line-height: 1.45;
 }
 
 .diff-actions,
-.diff-file-list {
+.diff-file-list,
+.git-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
 }
 
-.diff-actions ion-button {
+.diff-actions ion-button,
+.git-actions ion-button {
   margin: 0;
 }
 
@@ -1690,7 +1940,9 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
   font-size: 0.86rem;
 }
 
-.diff-files {
+.diff-files,
+.git-files,
+.git-progress {
   border: 1px solid var(--t3-panel-border);
   border-radius: var(--t3-panel-radius);
   background: var(--t3-panel-background);
@@ -1698,13 +1950,41 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 }
 
 .diff-files h2,
-.diff-files p {
+.diff-files p,
+.git-files h2,
+.git-files p,
+.git-progress h2,
+.git-progress p {
   margin: 0;
 }
 
-.diff-files h2 {
+.diff-files h2,
+.git-files h2 {
   font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 0.82rem;
+}
+
+.git-progress h2 {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.git-progress p {
+  white-space: pre-wrap;
+  color: var(--ion-color-medium);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.git-commit-message {
+  --background: var(--t3-panel-background);
+  --border-radius: var(--t3-panel-radius);
+  --padding-bottom: 0.75rem;
+  --padding-end: 0.85rem;
+  --padding-start: 0.85rem;
+  --padding-top: 0.75rem;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: var(--t3-panel-radius);
 }
 
 .diff-preview,

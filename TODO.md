@@ -352,9 +352,20 @@ change backend behavior.
       changed-file list, whitespace toggle, loading/error/empty states, and
       latest/full controls. Unit tests cover diff parsing, large-patch bounding,
       legacy result mapping, and live checkpoint summary updates.
-- [ ] Add git status and action progress.
+- [x] Add git status and action progress.
       Acceptance: refresh, commit, push, commit+push, and PR prep stream progress
       with clear high-impact action affordances.
+      Evidence: `apps/mobile/src/client/ws/existingBackendClient.ts` wraps the
+      existing `vcs.refreshStatus`, `subscribeVcsStatus`, and
+      `git.runStackedAction` `/ws` methods inside the mobile compatibility
+      boundary, `apps/mobile/src/client/mobileGit.ts` maps current and legacy
+      git status shapes, reduces live status events, runs stacked git actions,
+      and converts action progress chunks into bounded mobile log entries, and
+      `apps/mobile/src/views/ChatPage.vue` replaces the static git placeholder
+      with real repository status, changed-file rows, commit message input,
+      refresh/commit/push/commit+push/PR action buttons, streamed progress, and
+      error/empty states. Unit tests cover status mapping, stream reduction, and
+      progress mapping.
 - [ ] Add filesystem browse, project creation, and clone repository.
       Acceptance: browse desktop paths, create project records, clone repos, and
       report permission/clone failures without backend changes.
