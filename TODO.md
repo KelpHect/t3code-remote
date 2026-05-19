@@ -244,9 +244,14 @@ client/state modules first; UI consumes state rather than owning transport.
       offline/online recovery; `apps/mobile/src/client/connectionState.ts`
       exposes visible realtime states to the UI; `apps/mobile/tests/unit/realtimeConnection.spec.ts`
       covers auth-required, connected, failed retry, offline, and backoff caps.
-- [ ] Implement command outbox with client-generated command IDs.
+- [x] Implement command outbox with client-generated command IDs.
       Acceptance: send/continue/stop commands persist before dispatch, replay
       after reconnect, and are removed only after success or explicit cancel.
+      Evidence: `apps/mobile/src/client/commandOutbox.ts` generates
+      `mobile-*` command IDs, persists queued commands before dispatch, retries
+      failed commands, replays queued send/continue/stop intents, and removes
+      commands only on success/cancel; `apps/mobile/tests/unit/commandOutbox.spec.ts`
+      covers those paths.
 - [ ] Implement sequence filtering for shell/thread events.
       Acceptance: stale or duplicate events do not regress project/thread/chat
       state.
