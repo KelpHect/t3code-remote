@@ -85,6 +85,52 @@ describe("mobile realtime connection loop", () => {
     await waitForStatus(snapshots, "auth-required");
   });
 
+  test("uses bound global timers when no test timers are provided", async () => {
+    const originalSetTimeout = globalThis.setTimeout;
+    const originalClearTimeout = globalThis.clearTimeout;
+    const callbacks: Array<() => void> = [];
+    const setTimer = vi.fn(function (this: typeof globalThis, callback: () => void) {
+      expect(this).toBe(globalThis);
+      callbacks.push(callback);
+      return 1 as ReturnType<typeof setTimeout>;
+    });
+    const clearTimer = vi.fn(function (this: typeof globalThis) {
+      expect(this).toBe(globalThis);
+    });
+    Object.defineProperty(globalThis, "setTimeout", {
+      configurable: true,
+      value: setTimer,
+    });
+    Object.defineProperty(globalThis, "clearTimeout", {
+      configurable: true,
+      value: clearTimer,
+    });
+
+    try {
+      const snapshots: RealtimeConnectionSnapshot[] = [];
+      const loop = new RealtimeConnectionLoop({
+        getCredentials: () => null,
+        onSnapshot: (snapshot) => snapshots.push(snapshot),
+      });
+
+      loop.start();
+      callbacks.shift()?.();
+
+      await waitForStatus(snapshots, "auth-required");
+      loop.stop();
+      expect(setTimer).toHaveBeenCalledOnce();
+    } finally {
+      Object.defineProperty(globalThis, "setTimeout", {
+        configurable: true,
+        value: originalSetTimeout,
+      });
+      Object.defineProperty(globalThis, "clearTimeout", {
+        configurable: true,
+        value: originalClearTimeout,
+      });
+    }
+  });
+
   test("connects with a freshly issued ws token", async () => {
     const timers = createTimerHarness();
     const snapshots: RealtimeConnectionSnapshot[] = [];

@@ -44,6 +44,7 @@ const DEFAULT_PORT = "3773";
 const DEFAULT_TIMEOUT_MS = 1500;
 
 const PRIVATE_HOSTNAME_SUFFIXES = [".local"];
+const defaultFetch: typeof fetch = (...args) => globalThis.fetch(...args);
 
 const getWindow = () => (typeof window === "undefined" ? undefined : window);
 
@@ -222,7 +223,7 @@ export async function probeBackendCandidate(
   }
 
   const startedAt = options?.now?.() ?? Date.now();
-  const fetcher = options?.fetcher ?? fetch;
+  const fetcher = options?.fetcher ?? defaultFetch;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), options?.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 

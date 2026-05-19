@@ -24,6 +24,11 @@ loopback, RFC1918 LAN ranges, CGNAT/VPN ranges, link-local, and `.local`
 hostnames. Public HTTP backend URLs are rejected by the mobile client before
 fetch or WebSocket connection; public remote access must use HTTPS.
 
+The Android WebView is served through Capacitor's local `http://localhost`
+scheme so private `http://` LAN/VPN/emulator requests are not blocked as mixed
+content. Backend URL validation still rejects public cleartext hosts before any
+request is made.
+
 ## Setup
 
 From the repository root:

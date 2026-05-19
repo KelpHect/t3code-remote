@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import {
   classifyProbeError,
@@ -74,6 +74,38 @@ describe("mobile backend discovery", () => {
     expect(result.status).toBe("valid");
     expect(result.authenticated).toBe(false);
     expect(result.message).toContain("pairing required");
+  });
+
+  test("uses bound global fetch when no test fetcher is provided", async () => {
+    const [candidate] = generateBackendCandidates({ platform: "web" });
+    const originalFetch = globalThis.fetch;
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          authenticated: false,
+          auth: {
+            policy: "desktop-managed-local",
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    Object.defineProperty(globalThis, "fetch", {
+      configurable: true,
+      value: fetcher,
+    });
+
+    try {
+      const result = await probeBackendCandidate(candidate);
+
+      expect(result.status).toBe("valid");
+      expect(fetcher).toHaveBeenCalledOnce();
+    } finally {
+      Object.defineProperty(globalThis, "fetch", {
+        configurable: true,
+        value: originalFetch,
+      });
+    }
   });
 
   test("rejects invalid auth session responses", async () => {

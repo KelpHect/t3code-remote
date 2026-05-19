@@ -32,6 +32,8 @@ export interface IssueWebSocketTokenOptions {
 
 const PAIRING_TOKEN_PARAM = "token";
 
+const defaultFetch: typeof fetch = (...args) => globalThis.fetch(...args);
+
 async function readJsonPayload(response: Response) {
   try {
     return (await response.json()) as unknown;
@@ -126,7 +128,7 @@ export async function bootstrapBearerSession(
     backendUrl: options.backendUrl,
     pairingInput: options.pairingInput,
   });
-  const fetcher = options.fetcher ?? fetch;
+  const fetcher = options.fetcher ?? defaultFetch;
   const response = await fetcher(`${target.backendUrl}/api/auth/bootstrap/bearer`, {
     body: JSON.stringify({
       credential: target.credential,
@@ -164,7 +166,7 @@ export async function issueWebSocketToken(
     throw new Error("Pair with the backend before requesting a WebSocket token.");
   }
 
-  const fetcher = options.fetcher ?? fetch;
+  const fetcher = options.fetcher ?? defaultFetch;
   const response = await fetcher(`${backendUrl}/api/auth/ws-token`, {
     headers: {
       authorization: `Bearer ${sessionToken}`,

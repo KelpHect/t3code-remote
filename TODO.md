@@ -520,13 +520,28 @@ desktop/mobile state parity. Scope guardrail: implementation remains in
 
 ### Manual Device And Network Proof
 
-- [ ] Run and document the Android emulator beta script against a live local T3
+- [x] Run and document the Android emulator beta script against a live local T3
       backend.
       Acceptance: a dated report under `apps/mobile/docs/qa/` records emulator
       discovery of `http://10.0.2.2:3773`, pairing, shell subscription, opening
       an existing thread, sending a turn, stopping/continuing a turn, viewing a
       diff, git status, files, and terminal output; screenshots or redacted logs
       prove each step.
+      Evidence: `apps/mobile/docs/qa/2026-05-19-emulator-beta/report.md`
+      records a live emulator pass against the unmodified desktop backend, with
+      screenshots for shell sync, diff, git, files, and terminal output. The
+      current desktop backend listened only on `127.0.0.1:3773`, so this pass
+      used `adb reverse tcp:3773 tcp:3773`; direct `10.0.2.2` discovery and
+      safe chat turn control are reopened below as narrower follow-ups.
+- [ ] Prove direct emulator-host discovery without `adb reverse`.
+      Acceptance: with a desktop backend reachable from the emulator host
+      network, discovery finds and pairs through `http://10.0.2.2:3773` or a
+      configured equivalent, and the QA report distinguishes any remaining
+      loopback-only backend state from app discovery failure.
+- [ ] Run a safe live chat turn-control proof against a disposable thread.
+      Acceptance: on emulator, a new or disposable test thread sends a turn,
+      stops or cancels active work, continues/retries where supported, and
+      records redacted evidence without mutating an active user thread.
 - [ ] Run and document a physical Android LAN/VPN beta pass.
       Acceptance: a phone on the same LAN and a phone over VPN/Teleport can
       discover or manually connect to the desktop backend, pair, continue an
@@ -742,6 +757,14 @@ app and docs; do not weaken backend auth.
       Acceptance: bearer tokens survive app restart through the secure store,
       are cleared on sign out/revoke, are not present in localStorage, logs, or
       screenshot fixtures, and cannot be restored through unsafe Android backup.
+- [ ] Disable or redact secure-storage payloads in Capacitor/plugin logs.
+      Acceptance: Android logcat and app diagnostics never include pairing
+      tokens, bearer tokens, ws tokens, or serialized auth-session values while
+      pairing, storing, refreshing, or clearing credentials; tests or release
+      docs cover the logging posture.
+      Evidence: the 2026-05-19 emulator beta pass observed Capacitor debug
+      logging of secure-storage `set` method payloads, which can include stored
+      auth session values.
 - [ ] Add token/session revocation UX.
       Acceptance: the app exposes a clear disconnect/sign-out flow that removes
       local tokens, closes sockets/subscriptions, clears queued commands, and

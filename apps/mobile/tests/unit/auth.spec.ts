@@ -76,6 +76,44 @@ describe("mobile auth client", () => {
     expect(consoleSpy).not.toHaveBeenCalled();
   });
 
+  test("uses bound global fetch when no test fetcher is provided", async () => {
+    const originalFetch = globalThis.fetch;
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          authenticated: true,
+          role: "client",
+          sessionMethod: "bearer-session-token",
+          expiresAt: "2026-05-18T20:00:00.000Z",
+          sessionToken: "session-token",
+        }),
+        { status: 200 },
+      ),
+    );
+    Object.defineProperty(globalThis, "fetch", {
+      configurable: true,
+      value: fetcher,
+    });
+
+    try {
+      await expect(
+        bootstrapBearerSession({
+          backendUrl: "http://127.0.0.1:3773",
+          pairingInput: "pairing-token",
+        }),
+      ).resolves.toMatchObject({
+        sessionToken: "session-token",
+      });
+
+      expect(fetcher).toHaveBeenCalledOnce();
+    } finally {
+      Object.defineProperty(globalThis, "fetch", {
+        configurable: true,
+        value: originalFetch,
+      });
+    }
+  });
+
   test("rejects bearer bootstrap responses without sessionToken", async () => {
     await expect(
       bootstrapBearerSession({

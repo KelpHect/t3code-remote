@@ -55,6 +55,12 @@ const DEFAULT_BASE_DELAY_MS = 500;
 const DEFAULT_MAX_DELAY_MS = 10_000;
 const DEFAULT_HEALTH_CHECK_INTERVAL_MS = 5_000;
 const DEFAULT_STALE_HEARTBEAT_MS = 30_000;
+const defaultSetTimer: NonNullable<RealtimeConnectionLoopOptions["setTimer"]> = (
+  callback,
+  delayMs,
+) => globalThis.setTimeout(callback, delayMs);
+const defaultClearTimer: NonNullable<RealtimeConnectionLoopOptions["clearTimer"]> = (timer) =>
+  globalThis.clearTimeout(timer);
 
 export function getReconnectDelay(input: {
   readonly attempt: number;
@@ -110,7 +116,7 @@ export class RealtimeConnectionLoop {
   constructor(options: RealtimeConnectionLoopOptions) {
     this.options = {
       baseDelayMs: options.baseDelayMs ?? DEFAULT_BASE_DELAY_MS,
-      clearTimer: options.clearTimer ?? clearTimeout,
+      clearTimer: options.clearTimer ?? defaultClearTimer,
       createTransport:
         options.createTransport ??
         ((input) =>
@@ -124,7 +130,7 @@ export class RealtimeConnectionLoop {
       issueToken: options.issueToken ?? issueWebSocketToken,
       maxDelayMs: options.maxDelayMs ?? DEFAULT_MAX_DELAY_MS,
       now: options.now ?? Date.now,
-      setTimer: options.setTimer ?? setTimeout,
+      setTimer: options.setTimer ?? defaultSetTimer,
       staleHeartbeatMs: options.staleHeartbeatMs ?? DEFAULT_STALE_HEARTBEAT_MS,
       ...options,
     };
