@@ -468,9 +468,13 @@ validation may run existing checks; implementation stays mobile-only.
 
 ### Checks
 
-- [ ] Establish mobile validation command set.
+- [x] Establish mobile validation command set.
       Acceptance: `bun --cwd apps/mobile lint`, `typecheck`, `test`,
       `build`, and `cap:sync:android` pass after scaffold normalization.
+      Evidence: `apps/mobile/package.json` exposes
+      `bun --cwd apps/mobile validate`, and `apps/mobile/README.md` documents
+      both the wrapper and expanded mobile gates. Verified with
+      `bun --cwd apps/mobile validate`.
 - [ ] Run root validation after scaffold.
       Acceptance: `bun fmt`, `bun lint`, `bun typecheck`, and
       `TURBO_ENV_MODE=loose LANG=C LC_ALL=C LANGUAGE=C bun run test` pass or

@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "test:e2e": "cypress run",
     "lint": "eslint .",
+    "validate": "bun run lint && bun run typecheck && bun run test && bun run build && bun run cap:sync:android",
     "cap:sync:android": "capacitor sync android",
     "android:gradle": "bash scripts/android-gradle.sh",
     "android:assemble:debug": "bun run build && bun run cap:sync:android && bun run android:gradle -- assembleDebug",

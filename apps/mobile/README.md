@@ -100,6 +100,12 @@ tree before that gate is met.
 Mobile gates:
 
 ```sh
+bun --cwd apps/mobile validate
+```
+
+Expanded mobile gates:
+
+```sh
 bun --cwd apps/mobile lint
 bun --cwd apps/mobile typecheck
 bun --cwd apps/mobile test
