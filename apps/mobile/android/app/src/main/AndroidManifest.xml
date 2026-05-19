@@ -37,7 +37,8 @@
         </provider>
     </application>
 
-    <!-- Permissions -->
-
+    <!-- HTTP/WebSocket probing over emulator host networking, LAN, or VPN.
+         Do not add location/nearby-device permissions unless discovery starts
+         reading Wi-Fi SSIDs, Bluetooth, or platform network metadata. -->
     <uses-permission android:name="android.permission.INTERNET" />
 </manifest>

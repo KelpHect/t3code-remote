@@ -426,9 +426,16 @@ iOS remains deferred.
       express private CIDR ranges in XML, with app-owned URL validation as the
       restriction boundary. Unit tests cover public HTTP rejection and private
       host classification.
-- [ ] Add Android permissions/network config needed for LAN/VPN discovery.
+- [x] Add Android permissions/network config needed for LAN/VPN discovery.
       Acceptance: manifest/config includes only required permissions, with
       user-visible rationale where Android requires it.
+      Evidence: `apps/mobile/android/app/src/main/AndroidManifest.xml` declares
+      only `android.permission.INTERNET` for HTTP/WebSocket probing over
+      emulator host networking, LAN, and VPN. The manifest comment and
+      `apps/mobile/README.md` explain that location, nearby-device, Bluetooth,
+      Wi-Fi SSID, and notification permissions are intentionally absent because
+      current discovery does not read platform network metadata or require a
+      runtime permission prompt.
 - [ ] Define debug/release Android artifact paths and signing strategy.
       Acceptance: README documents APK/AAB commands, signing env vars, artifact
       output paths, and what stays out of git.

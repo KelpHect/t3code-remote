@@ -54,6 +54,15 @@ Android package metadata is explicit:
 - Splash: Android 12 splash style in `android/app/src/main/res/values/styles.xml`
   with the generated splash images under `android/app/src/main/res/drawable-*`
 
+Android network permissions are intentionally narrow:
+
+- Required permission: `android.permission.INTERNET`
+- Not used: location, nearby devices, Bluetooth, Wi-Fi SSID, or notification
+  permissions
+- Rationale: current discovery probes explicit/generated HTTP(S) candidates over
+  emulator host networking, LAN, or VPN. It does not inspect platform network
+  metadata, so there is no runtime permission prompt to explain yet.
+
 ## Validation
 
 Mobile gates:
