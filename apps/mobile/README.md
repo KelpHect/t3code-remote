@@ -63,6 +63,34 @@ Android network permissions are intentionally narrow:
   emulator host networking, LAN, or VPN. It does not inspect platform network
   metadata, so there is no runtime permission prompt to explain yet.
 
+Android artifacts:
+
+```sh
+bun --cwd apps/mobile android:assemble:debug
+bun --cwd apps/mobile android:assemble:release
+bun --cwd apps/mobile android:bundle:release
+```
+
+- Debug APK: `apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk`
+- Release APK: `apps/mobile/android/app/build/outputs/apk/release/app-release.apk`
+- Release AAB: `apps/mobile/android/app/build/outputs/bundle/release/app-release.aab`
+
+Capacitor Android currently compiles Java 21 sources. The artifact scripts use
+`JAVA_HOME` when set; otherwise they try Android Studio's bundled JBR via
+`ANDROID_STUDIO_JBR` and common local Android Studio install paths.
+
+Release signing is optional at build time and enabled only when every variable is
+present:
+
+```sh
+export T3_MOBILE_ANDROID_KEYSTORE_PATH=/absolute/path/to/t3-code-mobile.jks
+export T3_MOBILE_ANDROID_KEYSTORE_PASSWORD=...
+export T3_MOBILE_ANDROID_KEY_ALIAS=...
+export T3_MOBILE_ANDROID_KEY_PASSWORD=...
+```
+
+Keystores, `key.properties`, APKs, and AABs stay out of git.
+
 ## Validation
 
 Mobile gates:

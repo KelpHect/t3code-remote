@@ -13,7 +13,11 @@
     "test:watch": "vitest",
     "test:e2e": "cypress run",
     "lint": "eslint .",
-    "cap:sync:android": "capacitor sync android"
+    "cap:sync:android": "capacitor sync android",
+    "android:gradle": "bash scripts/android-gradle.sh",
+    "android:assemble:debug": "bun run build && bun run cap:sync:android && bun run android:gradle -- assembleDebug",
+    "android:assemble:release": "bun run build && bun run cap:sync:android && bun run android:gradle -- assembleRelease",
+    "android:bundle:release": "bun run build && bun run cap:sync:android && bun run android:gradle -- bundleRelease"
   },
   "dependencies": {
     "@capacitor/core": "^8.3.4",

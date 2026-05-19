@@ -436,9 +436,17 @@ iOS remains deferred.
       Wi-Fi SSID, and notification permissions are intentionally absent because
       current discovery does not read platform network metadata or require a
       runtime permission prompt.
-- [ ] Define debug/release Android artifact paths and signing strategy.
+- [x] Define debug/release Android artifact paths and signing strategy.
       Acceptance: README documents APK/AAB commands, signing env vars, artifact
       output paths, and what stays out of git.
+      Evidence: `apps/mobile/package.json` now exposes debug APK, release APK,
+      and release AAB Gradle wrapper scripts. `apps/mobile/android/app/build.gradle`
+      enables release signing only when all `T3_MOBILE_ANDROID_*` keystore
+      environment variables are present, so normal debug validation stays
+      unsigned and deterministic. `apps/mobile/android/.gitignore` excludes APKs,
+      AABs, keystores, and `key.properties`, and `apps/mobile/README.md`
+      documents commands, artifact paths, signing variables, and secret
+      boundaries.
 
 ### iOS
 
