@@ -108,6 +108,8 @@
             class="composer-input"
             placeholder="Message"
             :rows="1"
+            :value="composerText"
+            @ionInput="onComposerInput"
           />
           <ion-button shape="round" aria-label="Send message">
             <ion-icon slot="icon-only" :icon="arrowUpOutline" />
@@ -283,7 +285,7 @@ Success</code></pre>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
   IonActionSheet,
   IonBadge,
@@ -317,6 +319,7 @@ import {
   stopCircleOutline,
 } from "ionicons/icons";
 
+import { mobileComposerDrafts, type ComposerDraftRef } from "@/client/composerDrafts";
 import { useConnectionState } from "@/client/connectionState";
 
 const {
@@ -411,6 +414,13 @@ const modelModalOpen = ref(false);
 const toolsOpen = ref(false);
 const activeTool = ref<ToolId | null>(null);
 const emptyChat = ref(false);
+const composerText = ref("");
+
+const activeDraftRef = computed<ComposerDraftRef>(() => ({
+  backendUrl: selectedBackend.value?.candidate.url ?? "unpaired",
+  projectId: "t3code-remote",
+  threadId: emptyChat.value ? "new-chat" : "mobile-ui",
+}));
 
 const connectionSummary = computed(() => {
   if (selectedBackend.value) {
@@ -463,10 +473,58 @@ const setEmptyChat = (empty: boolean) => {
   emptyChat.value = empty;
 };
 
+const onComposerInput = (event: { detail: { value?: string | null } }) => {
+  composerText.value = event.detail.value ?? "";
+};
+
 const openTool = (tool: ToolId) => {
   activeTool.value = tool;
   toolsOpen.value = false;
 };
+
+const loadComposerDraft = (ref: ComposerDraftRef) => {
+  composerText.value = mobileComposerDrafts.load(ref)?.text ?? "";
+};
+
+const saveComposerDraft = (ref: ComposerDraftRef, text = composerText.value) => {
+  mobileComposerDrafts.save(ref, text);
+};
+
+const flushComposerDraft = () => {
+  saveComposerDraft(activeDraftRef.value);
+};
+
+const handleVisibilityChange = () => {
+  if (globalThis.document?.visibilityState === "hidden") {
+    flushComposerDraft();
+  }
+};
+
+watch(
+  activeDraftRef,
+  (nextRef, previousRef) => {
+    if (previousRef) saveComposerDraft(previousRef);
+    loadComposerDraft(nextRef);
+  },
+  { immediate: true },
+);
+
+watch(composerText, (text) => {
+  saveComposerDraft(activeDraftRef.value, text);
+});
+
+onMounted(() => {
+  if (typeof globalThis.document === "undefined") return;
+  globalThis.document.addEventListener("visibilitychange", handleVisibilityChange);
+  globalThis.window?.addEventListener("pagehide", flushComposerDraft);
+});
+
+onBeforeUnmount(() => {
+  flushComposerDraft();
+  if (typeof globalThis.document === "undefined") return;
+  globalThis.document.removeEventListener("visibilitychange", handleVisibilityChange);
+  globalThis.window?.removeEventListener("pagehide", flushComposerDraft);
+});
 
 const toolActionButtons = [
   {

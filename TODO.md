@@ -260,9 +260,15 @@ client/state modules first; UI consumes state rather than owning transport.
       stale, duplicate, or malformed updates; `apps/mobile/tests/unit/sequenceFilter.spec.ts`
       verifies shell events, thread snapshots, independent scopes, and malformed
       updates.
-- [ ] Keep composer drafts local per device.
+- [x] Keep composer drafts local per device.
       Acceptance: drafts survive screen navigation and app backgrounding but do
       not sync to the backend.
+      Evidence: `apps/mobile/src/client/composerDrafts.ts` stores drafts in
+      app-local browser/device storage keyed by backend/project/thread, the chat
+      composer loads/saves through that app-owned store and flushes on
+      visibility/page lifecycle events, and
+      `apps/mobile/tests/unit/composerDrafts.spec.ts` covers persistence,
+      per-backend/thread isolation, blank-draft removal, and malformed storage.
 
 ## P4 - Core T3 Workflows
 
