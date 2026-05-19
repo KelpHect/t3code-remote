@@ -33,6 +33,17 @@ export class ExistingBackendClient {
     });
   }
 
+  subscribeThread(
+    threadId: string,
+    listener: (item: unknown) => void,
+    options?: { readonly onError?: () => void },
+  ) {
+    return this.transport.subscribe("orchestration.subscribeThread", { threadId }, listener, {
+      onComplete: options?.onError,
+      onError: options?.onError,
+    });
+  }
+
   dispose() {
     this.transport.dispose();
   }

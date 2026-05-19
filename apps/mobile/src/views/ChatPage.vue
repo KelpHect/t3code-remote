@@ -70,7 +70,7 @@
           </ion-button>
         </section>
 
-        <section v-if="emptyChat" class="empty-chat" aria-label="Empty chat">
+        <section v-if="showEmptyChat" class="empty-chat" aria-label="Empty chat">
           <div class="empty-logo">T3</div>
           <h1>T3 Code</h1>
           <p>{{ emptyChatCopy }}</p>
@@ -83,6 +83,42 @@
         </section>
 
         <section v-else class="message-list" aria-label="Messages">
+          <div
+            v-if="pendingApprovals.length > 0 || pendingUserInputs.length > 0"
+            class="prompt-stack"
+            aria-label="Pending prompts"
+          >
+            <article
+              v-for="approval in pendingApprovals"
+              :key="approval.requestId"
+              class="prompt-card"
+            >
+              <ion-badge color="warning">{{ approval.requestKind }}</ion-badge>
+              <div>
+                <strong>Approval required</strong>
+                <p>
+                  {{
+                    approval.detail ??
+                    "Review this request on desktop or continue once actions are wired."
+                  }}
+                </p>
+              </div>
+            </article>
+            <article
+              v-for="userInput in pendingUserInputs"
+              :key="userInput.requestId"
+              class="prompt-card"
+            >
+              <ion-badge color="primary">Input</ion-badge>
+              <div>
+                <strong>{{ userInput.questions[0]?.header ?? "User input needed" }}</strong>
+                <p>{{ userInput.questions[0]?.question ?? "Answer requested by the agent." }}</p>
+              </div>
+            </article>
+          </div>
+
+          <p v-if="messages.length === 0" class="empty-thread-note">{{ threadEmptyCopy }}</p>
+
           <article
             v-for="message in messages"
             :key="message.id"
@@ -95,6 +131,17 @@
               <p>{{ message.text }}</p>
             </div>
           </article>
+
+          <section v-if="visibleActivities.length > 0" class="activity-feed" aria-label="Actions">
+            <p class="eyebrow">Actions</p>
+            <article v-for="activity in visibleActivities" :key="activity.id" class="activity-row">
+              <span class="activity-dot" :class="`activity-${activity.tone ?? 'info'}`" />
+              <div>
+                <strong>{{ activity.summary }}</strong>
+                <p>{{ activity.detail ?? activity.kind }}</p>
+              </div>
+            </article>
+          </section>
         </section>
       </main>
     </ion-content>
@@ -322,8 +369,10 @@ import {
 import { mobileComposerDrafts, type ComposerDraftRef } from "@/client/composerDrafts";
 import { useConnectionState } from "@/client/connectionState";
 import { useMobileShellState } from "@/client/mobileShell";
+import { useMobileThreadState } from "@/client/mobileThread";
 
 const {
+  bearerSession,
   pairedBackendUrl,
   candidateCount,
   discoveryState,
@@ -334,31 +383,17 @@ const {
   statusText,
   validBackends,
 } = useConnectionState();
-const { activeProject, activeThread, shellSync } = useMobileShellState();
-
-const messages = [
-  {
-    id: "m1",
-    role: "user",
-    avatar: "K",
-    author: "You",
-    text: "Use Ionic Vue and make the mobile app feel like a clean chat client first.",
-  },
-  {
-    id: "m2",
-    role: "assistant",
-    avatar: "T3",
-    author: "T3 Code",
-    text: "I am replacing the starter tabs with a chat-first shell and keeping project tools behind mobile controls.",
-  },
-  {
-    id: "m3",
-    role: "assistant",
-    avatar: "T3",
-    author: "T3 Code",
-    text: "Next steps are history navigation, settings, and contextual sheets before backend discovery starts.",
-  },
-] as const;
+const { activeProject, activeThread, activeThreadId, shellSync } = useMobileShellState();
+const {
+  activeThreadDetail,
+  pendingApprovals,
+  pendingUserInputs,
+  startThreadSync,
+  stopThreadSync,
+  threadSync,
+  visibleActivities,
+  visibleMessages,
+} = useMobileThreadState();
 
 const fileEntries = [
   {
@@ -418,6 +453,7 @@ const toolsOpen = ref(false);
 const activeTool = ref<ToolId | null>(null);
 const emptyChat = ref(false);
 const composerText = ref("");
+const messages = computed(() => visibleMessages.value);
 
 const activeDraftRef = computed<ComposerDraftRef>(() => ({
   backendUrl: pairedBackendUrl.value ?? selectedBackend.value?.candidate.url ?? "unpaired",
@@ -425,20 +461,30 @@ const activeDraftRef = computed<ComposerDraftRef>(() => ({
   threadId: emptyChat.value ? "new-chat" : (activeThread.value?.id ?? "new-thread"),
 }));
 
-const activeThreadTitle = computed(() => activeThread.value?.title ?? "T3 Code");
+const showEmptyChat = computed(() => emptyChat.value || !activeThread.value);
+const activeThreadTitle = computed(
+  () => activeThreadDetail.value.title ?? activeThread.value?.title ?? "T3 Code",
+);
 const activeProjectTitle = computed(() => activeProject.value?.title ?? "T3 Code");
 const activeModelLabel = computed(() => activeThread.value?.modelLabel ?? "GPT-5.5");
 const shellBadgeText = computed(() => {
+  if (threadSync.value.status === "synced") return "Live";
+  if (threadSync.value.status === "connecting") return "Loading";
   if (shellSync.value.status === "synced") return "Synced";
   if (shellSync.value.status === "connecting") return "Syncing";
   return statusText.value;
 });
 const shellBadgeColor = computed(() => {
+  if (threadSync.value.status === "synced") return "success";
+  if (threadSync.value.status === "connecting") return "primary";
   if (shellSync.value.status === "synced") return "success";
   if (shellSync.value.status === "connecting") return "primary";
   return selectedBackend.value ? "success" : "medium";
 });
 const shellStatusDetail = computed(() => {
+  if (threadSync.value.status === "synced" || threadSync.value.status === "connecting") {
+    return threadSync.value.message;
+  }
   if (shellSync.value.status === "synced" || shellSync.value.status === "connecting") {
     return shellSync.value.message;
   }
@@ -468,10 +514,15 @@ const headerSubtitle = computed(() => {
 });
 
 const emptyChatCopy = computed(() =>
-  selectedBackend.value
+  selectedBackend.value && !activeThread.value
     ? "Backend is reachable. Pair or select an existing project to continue working."
     : "Keep the desktop app running; this screen updates as soon as a reachable backend is found.",
 );
+const threadEmptyCopy = computed(() => {
+  if (threadSync.value.status === "connecting") return "Loading thread messages...";
+  if (threadSync.value.status === "failed") return threadSync.value.message;
+  return "No messages in this thread yet.";
+});
 
 const activeToolDetails = computed(() => {
   if (!activeTool.value) {
@@ -533,6 +584,28 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () =>
+    [
+      pairedBackendUrl.value,
+      bearerSession.value?.sessionToken ?? null,
+      activeThreadId.value,
+      emptyChat.value,
+    ] as const,
+  ([backendUrl, sessionToken, threadId, isEmpty]) => {
+    if (!backendUrl || !sessionToken || !threadId || isEmpty) {
+      stopThreadSync({ keepState: Boolean(threadId) });
+      return;
+    }
+    startThreadSync({
+      backendUrl,
+      sessionToken,
+      threadId,
+    });
+  },
+  { immediate: true },
+);
+
 watch(composerText, (text) => {
   saveComposerDraft(activeDraftRef.value, text);
 });
@@ -544,6 +617,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  stopThreadSync();
   flushComposerDraft();
   if (typeof globalThis.document === "undefined") return;
   globalThis.document.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -728,6 +802,43 @@ const toolActionButtons = [
   padding: 0.5rem 0 1rem;
 }
 
+.prompt-stack {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.prompt-card,
+.activity-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.75rem;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: 1rem;
+  background: var(--t3-panel-background);
+  padding: 0.85rem;
+}
+
+.prompt-card strong,
+.activity-row strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.9rem;
+}
+
+.prompt-card p,
+.activity-row p,
+.empty-thread-note {
+  margin: 0;
+  color: var(--ion-color-medium);
+  line-height: 1.45;
+}
+
+.empty-thread-note {
+  padding: 1rem 0;
+  text-align: center;
+}
+
 .empty-chat {
   display: grid;
   flex: 1;
@@ -829,7 +940,34 @@ const toolActionButtons = [
 }
 
 .message-body p:last-child {
+  white-space: pre-wrap;
   line-height: 1.5;
+}
+
+.activity-feed {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+}
+
+.activity-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-top: 0.28rem;
+  border-radius: 999px;
+  background: var(--ion-color-medium);
+}
+
+.activity-thinking {
+  background: var(--ion-color-primary);
+}
+
+.activity-tool {
+  background: var(--ion-color-success);
+}
+
+.activity-error {
+  background: var(--ion-color-danger);
 }
 
 .sheet-content {

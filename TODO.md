@@ -292,10 +292,19 @@ change backend behavior.
       the drawer, `apps/mobile/src/views/ChatPage.vue` reflects the selected
       project/thread, and `apps/mobile/tests/unit/mobileShell.spec.ts` covers
       snapshot mapping, upserts, removals, ordering, and stale-event rejection.
-- [ ] Subscribe to `orchestration.subscribeThread` and render real chat turns,
+- [x] Subscribe to `orchestration.subscribeThread` and render real chat turns,
       actions, approvals, and user-input prompts.
       Acceptance: selecting a thread opens current messages and live updates;
       long lists remain smooth.
+      Evidence: `apps/mobile/src/client/ws/existingBackendClient.ts` now wraps
+      `orchestration.subscribeThread`, `apps/mobile/src/client/mobileThread.ts`
+      maps thread snapshots/events into app-owned message, action, session,
+      proposed-plan, approval, and user-input DTOs with sequence rejection,
+      reconnect, and bounded rendered lists, `apps/mobile/src/views/ChatPage.vue`
+      starts/stops selected-thread sync and renders real messages, actions, and
+      prompt cards, and `apps/mobile/tests/unit/mobileThread.spec.ts` covers
+      snapshot mapping, live events, stale/other-thread rejection, and pending
+      prompt derivation.
 - [ ] Implement send, continue, stop, and new thread/project chat flows.
       Acceptance: commands use client-generated command IDs and sync with
       desktop state.
