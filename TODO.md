@@ -450,9 +450,15 @@ iOS remains deferred.
 
 ### iOS
 
-- [ ] Defer iOS until Android passes beta gate.
+- [x] Defer iOS until Android passes beta gate.
       Acceptance: iOS checklist names macOS/Xcode/signing prerequisites but no
       iOS implementation is started before Android proof.
+      Evidence: `apps/mobile/docs/ios-deferred.md` states that iOS is blocked
+      until Android beta validation passes, names macOS/Xcode, Apple Developer
+      signing, bundle id, ATS/local-network, Keychain, simulator/device, and
+      TestFlight prerequisites, and records that no Capacitor `ios/` platform
+      tree should be generated before the Android proof. `apps/mobile/README.md`
+      links the deferral checklist.
 
 ## P6 - Validation And Release Baseline
 

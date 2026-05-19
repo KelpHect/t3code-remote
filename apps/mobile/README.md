@@ -91,6 +91,10 @@ export T3_MOBILE_ANDROID_KEY_PASSWORD=...
 
 Keystores, `key.properties`, APKs, and AABs stay out of git.
 
+iOS is deferred until Android passes the beta gate. The prerequisite checklist
+lives in `docs/ios-deferred.md`; do not generate a Capacitor `ios/` platform
+tree before that gate is met.
+
 ## Validation
 
 Mobile gates:
