@@ -123,6 +123,8 @@ TURBO_ENV_MODE=loose LANG=C LC_ALL=C LANGUAGE=C bun run test
 ```
 
 Use `bun run test`, never `bun test`, for the root test suite.
+The current warning baseline and latest validation evidence live in
+`docs/validation.md`.
 
 ## Ionic UI Contract
 

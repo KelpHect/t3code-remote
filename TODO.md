@@ -475,10 +475,15 @@ validation may run existing checks; implementation stays mobile-only.
       `bun --cwd apps/mobile validate`, and `apps/mobile/README.md` documents
       both the wrapper and expanded mobile gates. Verified with
       `bun --cwd apps/mobile validate`.
-- [ ] Run root validation after scaffold.
+- [x] Run root validation after scaffold.
       Acceptance: `bun fmt`, `bun lint`, `bun typecheck`, and
       `TURBO_ENV_MODE=loose LANG=C LC_ALL=C LANGUAGE=C bun run test` pass or
       document pre-existing unrelated warnings/failures.
+      Evidence: `apps/mobile/docs/validation.md` records the current root and
+      mobile gate baseline, including the known 9 existing web/client lint
+      warnings, Ionic/lightningcss build warnings, and latest passing root test
+      counts. Verified with `bun fmt`, `bun lint`, `bun typecheck`, and
+      `TURBO_ENV_MODE=loose LANG=C LC_ALL=C LANGUAGE=C bun run test`.
 - [ ] Add emulator install/launch/screenshot smoke script.
       Acceptance: one documented command builds/syncs/installs/launches and
       captures screenshots for the key mobile screens.
