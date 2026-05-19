@@ -8,7 +8,7 @@
           </ion-menu-button>
         </ion-buttons>
         <ion-title>
-          <span class="chat-title">T3 Code</span>
+          <span class="chat-title">{{ activeThreadTitle }}</span>
           <span class="chat-subtitle">{{ headerSubtitle }}</span>
         </ion-title>
         <ion-buttons slot="end">
@@ -27,10 +27,10 @@
         <section class="thread-status" aria-label="Current project status">
           <div>
             <p class="eyebrow">{{ selectedBackend ? "Ready" : "Discovery" }}</p>
-            <h1>T3 Code</h1>
-            <p>{{ statusDetail }}</p>
+            <h1>{{ activeProjectTitle }}</h1>
+            <p>{{ shellStatusDetail }}</p>
           </div>
-          <ion-badge :color="selectedBackend ? 'success' : 'medium'">{{ statusText }}</ion-badge>
+          <ion-badge :color="shellBadgeColor">{{ shellBadgeText }}</ion-badge>
         </section>
 
         <section class="connection-strip" aria-live="polite">
@@ -49,7 +49,7 @@
         <section class="thread-controls" aria-label="Chat controls">
           <ion-button fill="outline" size="small" shape="round" @click="setModelModalOpen(true)">
             <ion-icon slot="start" :icon="hardwareChipOutline" />
-            GPT-5.5
+            {{ activeModelLabel }}
             <ion-icon slot="end" :icon="chevronDownOutline" />
           </ion-button>
           <ion-button fill="outline" size="small" shape="round" @click="setModelModalOpen(true)">
@@ -321,8 +321,10 @@ import {
 
 import { mobileComposerDrafts, type ComposerDraftRef } from "@/client/composerDrafts";
 import { useConnectionState } from "@/client/connectionState";
+import { useMobileShellState } from "@/client/mobileShell";
 
 const {
+  pairedBackendUrl,
   candidateCount,
   discoveryState,
   probeResults,
@@ -332,6 +334,7 @@ const {
   statusText,
   validBackends,
 } = useConnectionState();
+const { activeProject, activeThread, shellSync } = useMobileShellState();
 
 const messages = [
   {
@@ -417,10 +420,30 @@ const emptyChat = ref(false);
 const composerText = ref("");
 
 const activeDraftRef = computed<ComposerDraftRef>(() => ({
-  backendUrl: selectedBackend.value?.candidate.url ?? "unpaired",
-  projectId: "t3code-remote",
-  threadId: emptyChat.value ? "new-chat" : "mobile-ui",
+  backendUrl: pairedBackendUrl.value ?? selectedBackend.value?.candidate.url ?? "unpaired",
+  projectId: activeProject.value?.id ?? "no-project",
+  threadId: emptyChat.value ? "new-chat" : (activeThread.value?.id ?? "new-thread"),
 }));
+
+const activeThreadTitle = computed(() => activeThread.value?.title ?? "T3 Code");
+const activeProjectTitle = computed(() => activeProject.value?.title ?? "T3 Code");
+const activeModelLabel = computed(() => activeThread.value?.modelLabel ?? "GPT-5.5");
+const shellBadgeText = computed(() => {
+  if (shellSync.value.status === "synced") return "Synced";
+  if (shellSync.value.status === "connecting") return "Syncing";
+  return statusText.value;
+});
+const shellBadgeColor = computed(() => {
+  if (shellSync.value.status === "synced") return "success";
+  if (shellSync.value.status === "connecting") return "primary";
+  return selectedBackend.value ? "success" : "medium";
+});
+const shellStatusDetail = computed(() => {
+  if (shellSync.value.status === "synced" || shellSync.value.status === "connecting") {
+    return shellSync.value.message;
+  }
+  return statusDetail.value;
+});
 
 const connectionSummary = computed(() => {
   if (selectedBackend.value) {
@@ -438,6 +461,7 @@ const connectionSummary = computed(() => {
 });
 
 const headerSubtitle = computed(() => {
+  if (activeThread.value?.branch) return activeThread.value.branch;
   if (selectedBackend.value) return selectedBackend.value.candidate.url;
   if (discoveryState.value === "scanning") return "Scanning for desktop backend";
   return "Private-network mobile client";

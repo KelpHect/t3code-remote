@@ -39,8 +39,8 @@
               <h2>Connection</h2>
               <p>{{ statusDetail }}</p>
             </ion-label>
-            <span class="connection-state" :class="{ online: selectedBackend }">
-              {{ statusText }}
+            <span class="connection-state" :class="{ online: selectedBackend || shellOnline }">
+              {{ shellStatusText }}
             </span>
           </ion-item>
         </ion-list>
@@ -49,7 +49,7 @@
           <ion-item-divider class="project-heading">
             <ion-icon :icon="chevronDownOutline" />
             <ion-icon :icon="folderOutline" />
-            <ion-label>{{ project.name }}</ion-label>
+            <ion-label>{{ project.title }}</ion-label>
             <span class="thread-count">{{ project.threads.length }}</span>
           </ion-item-divider>
           <ion-item
@@ -58,15 +58,29 @@
             button
             :detail="false"
             class="thread-item"
-            :class="{ active: thread.active }"
+            :class="{ active: thread.id === activeThreadId }"
+            @click="selectMenuThread(thread.id)"
           >
-            <span class="thread-rail" :class="{ working: thread.active }" aria-hidden="true" />
+            <span
+              class="thread-rail"
+              :class="{ working: thread.active || thread.id === activeThreadId }"
+              aria-hidden="true"
+            />
             <ion-label>
               <span class="thread-title-row">
                 <span class="thread-title">{{ thread.title }}</span>
-                <span class="thread-time">{{ thread.time }}</span>
+                <span class="thread-time">{{ formatThreadTime(thread) }}</span>
               </span>
-              <span class="thread-summary">{{ thread.summary }}</span>
+              <span class="thread-summary">{{ formatThreadSummary(thread) }}</span>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+
+        <ion-list v-if="showShellEmptyState" class="project-list" lines="none">
+          <ion-item class="empty-project-row">
+            <ion-label>
+              <h2>{{ shellEmptyTitle }}</h2>
+              <p>{{ shellSync.message }}</p>
             </ion-label>
           </ion-item>
         </ion-list>
@@ -78,13 +92,14 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, watch } from "vue";
 import {
   IonApp,
   IonContent,
   IonHeader,
   IonIcon,
   IonItem,
+  IonItemDivider,
   IonLabel,
   IonList,
   IonMenu,
@@ -92,6 +107,7 @@ import {
   IonSearchbar,
   IonTitle,
   IonToolbar,
+  menuController,
 } from "@ionic/vue";
 import {
   addOutline,
@@ -102,16 +118,32 @@ import {
 } from "ionicons/icons";
 
 import { useConnectionState } from "@/client/connectionState";
+import { type MobileShellThread, useMobileShellState } from "@/client/mobileShell";
 import { defaultSecretStore, loadAuthSession } from "@/client/secretStore";
 
 const {
+  bearerSession,
+  pairedBackendUrl,
   selectedBackend,
   setAuthSession,
   startDiscoveryLoop,
   statusDetail,
-  statusText,
   stopDiscoveryLoop,
 } = useConnectionState();
+const { activeThreadId, projects, selectThread, shellSync, startShellSync, stopShellSync } =
+  useMobileShellState();
+
+const shellOnline = computed(() => shellSync.value.status === "synced");
+const shellStatusText = computed(() => {
+  if (shellSync.value.status === "synced") return "Synced";
+  if (shellSync.value.status === "connecting") return "Syncing";
+  if (selectedBackend.value) return "Backend found";
+  return "Offline";
+});
+const shellEmptyTitle = computed(() =>
+  bearerSession.value ? "Syncing projects" : "Pair to load projects",
+);
+const showShellEmptyState = computed(() => projects.value.length === 0);
 
 onMounted(() => {
   void loadAuthSession(defaultSecretStore).then((session) => {
@@ -127,43 +159,50 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopDiscoveryLoop();
+  stopShellSync();
 });
 
-const projects = [
-  {
-    id: "t3code-remote",
-    name: "t3code-remote",
-    threads: [
-      {
-        id: "mobile-ui",
-        title: "Mobile UI rebuild",
-        summary: "Ionic Vue shell and chat surface",
-        active: true,
-        time: "now",
-      },
-      {
-        id: "backend-discovery",
-        title: "Backend discovery",
-        summary: "Emulator and private-network probes",
-        active: false,
-        time: "12m",
-      },
-    ],
+watch(
+  [pairedBackendUrl, bearerSession],
+  ([backendUrl, session]) => {
+    if (!backendUrl || !session) {
+      stopShellSync();
+      return;
+    }
+    startShellSync({
+      backendUrl,
+      sessionToken: session.sessionToken,
+    });
   },
-  {
-    id: "lockwell",
-    name: "lockwell",
-    threads: [
-      {
-        id: "investigate-backend",
-        title: "Investigate backend compatibility",
-        summary: "Read-only protocol audit",
-        active: false,
-        time: "29m",
-      },
-    ],
-  },
-] as const;
+  { immediate: true },
+);
+
+const selectMenuThread = (threadId: string) => {
+  selectThread(threadId);
+  void menuController.close();
+};
+
+const formatThreadSummary = (thread: MobileShellThread) => {
+  if (thread.hasPendingApprovals) return "Approval requested";
+  if (thread.hasPendingUserInput) return "Waiting for user input";
+  if (thread.hasActionableProposedPlan) return "Plan ready";
+  return [thread.modelLabel, thread.runtimeMode, thread.branch].filter(Boolean).join(" · ");
+};
+
+const formatThreadTime = (thread: MobileShellThread) => {
+  const timestamp = thread.latestUserMessageAt ?? thread.updatedAt;
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "";
+  const diffMs = Date.now() - date.getTime();
+  const minuteMs = 60_000;
+  const hourMs = 60 * minuteMs;
+  const dayMs = 24 * hourMs;
+  if (diffMs < minuteMs) return "now";
+  if (diffMs < hourMs) return `${Math.floor(diffMs / minuteMs)}m`;
+  if (diffMs < dayMs) return `${Math.floor(diffMs / hourMs)}h`;
+  return `${Math.floor(diffMs / dayMs)}d`;
+};
 </script>
 
 <style scoped>
@@ -342,6 +381,26 @@ const projects = [
 
 .thread-item.active {
   --background: #2a2a2d;
+}
+
+.empty-project-row {
+  --min-height: 3rem;
+}
+
+.empty-project-row h2,
+.empty-project-row p {
+  margin: 0;
+}
+
+.empty-project-row h2 {
+  color: #d4d4d8;
+  font-size: 0.78rem;
+}
+
+.empty-project-row p {
+  color: #8f8f97;
+  font-size: 0.7rem;
+  line-height: 1.3;
 }
 
 .thread-rail {

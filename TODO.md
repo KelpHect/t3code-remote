@@ -279,10 +279,19 @@ change backend behavior.
 
 ### Chat And Shell
 
-- [ ] Subscribe to `orchestration.subscribeShell` and render real projects and
+- [x] Subscribe to `orchestration.subscribeShell` and render real projects and
       threads.
       Acceptance: after pairing, projects/history replace fixture data and stay
       synchronized with desktop.
+      Evidence: `apps/mobile/src/client/ws/existingBackendClient.ts` wraps the
+      existing `/ws` transport inside the private compatibility boundary,
+      `apps/mobile/src/client/mobileShell.ts` subscribes to
+      `orchestration.subscribeShell`, maps snapshots/events into app-owned
+      project/thread DTOs, filters stale sequences, and reconnects on sync
+      failure, `apps/mobile/src/App.vue` renders real project/thread groups in
+      the drawer, `apps/mobile/src/views/ChatPage.vue` reflects the selected
+      project/thread, and `apps/mobile/tests/unit/mobileShell.spec.ts` covers
+      snapshot mapping, upserts, removals, ordering, and stale-event rejection.
 - [ ] Subscribe to `orchestration.subscribeThread` and render real chat turns,
       actions, approvals, and user-input prompts.
       Acceptance: selecting a thread opens current messages and live updates;
