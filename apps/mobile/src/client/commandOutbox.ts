@@ -1,4 +1,4 @@
-export type MobileOutboxIntent = "send" | "continue" | "stop" | "settings";
+export type MobileOutboxIntent = "send" | "continue" | "stop" | "settings" | "project";
 
 export interface MobileOutboxCommand {
   readonly type: string;

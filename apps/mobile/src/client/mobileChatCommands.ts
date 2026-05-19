@@ -33,7 +33,10 @@ export interface TurnCommandInput {
   readonly messageId?: string;
 }
 
-export function createMobileEntityId(prefix: "message" | "thread", randomUUID = randomUuid) {
+export function createMobileEntityId(
+  prefix: "message" | "project" | "thread",
+  randomUUID = randomUuid,
+) {
   return `mobile-${prefix}-${randomUUID()}`;
 }
 
@@ -116,6 +119,24 @@ export function buildThreadInteractionModeOutboxPayload(input: {
     createdAt: input.createdAt ?? new Date().toISOString(),
     interactionMode: input.interactionMode,
     threadId: input.threadId,
+  };
+}
+
+export function buildProjectCreateOutboxPayload(input: {
+  readonly projectId: string;
+  readonly title: string;
+  readonly workspaceRoot: string;
+  readonly modelSelection: MobileModelSelection;
+  readonly createdAt?: string;
+  readonly createWorkspaceRootIfMissing?: boolean;
+}) {
+  return {
+    createWorkspaceRootIfMissing: input.createWorkspaceRootIfMissing ?? true,
+    createdAt: input.createdAt ?? new Date().toISOString(),
+    defaultModelSelection: input.modelSelection,
+    projectId: input.projectId,
+    title: input.title,
+    workspaceRoot: input.workspaceRoot,
   };
 }
 

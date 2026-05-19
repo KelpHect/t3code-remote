@@ -435,16 +435,89 @@
         </section>
 
         <section v-else-if="activeTool === 'files'" class="tool-workspace">
-          <div class="path-bar">/home/kellhect/Projects/t3code-remote/apps/mobile</div>
-          <ion-list lines="full">
-            <ion-item v-for="entry in fileEntries" :key="entry.path">
-              <ion-icon slot="start" :icon="entry.icon" />
+          <div class="files-toolbar">
+            <div>
+              <p class="eyebrow">Desktop filesystem</p>
+              <h2>{{ filesTitle }}</h2>
+              <p>{{ filesStatusText }}</p>
+            </div>
+            <ion-spinner v-if="filesLoading" name="crescent" />
+          </div>
+          <div class="path-controls">
+            <ion-input
+              aria-label="Desktop path"
+              class="path-input"
+              placeholder="~/Projects"
+              :value="filePathInput"
+              @ionInput="onFilePathInput"
+            />
+            <ion-button size="small" shape="round" @click="browseFilePath">Browse</ion-button>
+            <ion-button fill="outline" size="small" shape="round" @click="browseParentPath">
+              Up
+            </ion-button>
+          </div>
+          <div class="git-actions">
+            <ion-button size="small" shape="round" :disabled="!filePathInput" @click="addProject">
+              Add project
+            </ion-button>
+          </div>
+          <p v-if="filesError" class="command-error" role="alert">{{ filesError }}</p>
+          <ion-list v-if="fileEntries.length" lines="full" class="file-list">
+            <ion-item
+              v-for="entry in fileEntries"
+              :key="entry.fullPath"
+              button
+              :detail="false"
+              @click="browseToEntry(entry.fullPath)"
+            >
+              <ion-icon slot="start" :icon="folderOpenOutline" />
               <ion-label>
                 <h2>{{ entry.name }}</h2>
-                <p>{{ entry.path }}</p>
+                <p>{{ entry.fullPath }}</p>
               </ion-label>
             </ion-item>
           </ion-list>
+          <p v-else class="empty-thread-note">Browse a desktop path to list directories.</p>
+
+          <div class="clone-panel">
+            <p class="eyebrow">Clone repository</p>
+            <ion-input
+              aria-label="Repository"
+              class="path-input"
+              placeholder="owner/repo or git URL"
+              :value="cloneRepositoryInput"
+              @ionInput="onCloneRepositoryInput"
+            />
+            <ion-input
+              aria-label="Clone destination"
+              class="path-input"
+              placeholder="/home/user/Projects/repo"
+              :value="cloneDestinationInput"
+              @ionInput="onCloneDestinationInput"
+            />
+            <div class="git-actions">
+              <ion-button
+                fill="outline"
+                size="small"
+                shape="round"
+                :disabled="filesLoading"
+                @click="lookupCloneRepository"
+              >
+                Lookup
+              </ion-button>
+              <ion-button
+                size="small"
+                shape="round"
+                :disabled="filesLoading"
+                @click="cloneRepository"
+              >
+                Clone + add
+              </ion-button>
+            </div>
+            <p v-if="cloneRepositoryInfo" class="sheet-note">
+              {{ cloneRepositoryInfo.nameWithOwner }} · {{ cloneRepositoryInfo.sshUrl }}
+            </p>
+          </div>
         </section>
 
         <section v-else-if="activeTool === 'terminal'" class="tool-workspace">
@@ -516,6 +589,7 @@ import {
   IonFooter,
   IonHeader,
   IonIcon,
+  IonInput,
   IonItem,
   IonLabel,
   IonList,
@@ -533,7 +607,6 @@ import {
   arrowUpOutline,
   chevronDownOutline,
   codeSlashOutline,
-  documentTextOutline,
   ellipsisHorizontalOutline,
   folderOpenOutline,
   hardwareChipOutline,
@@ -543,6 +616,7 @@ import {
 
 import {
   buildInterruptOutboxPayload,
+  buildProjectCreateOutboxPayload,
   buildThreadInteractionModeOutboxPayload,
   buildThreadMetaUpdateOutboxPayload,
   buildThreadRuntimeModeOutboxPayload,
@@ -561,6 +635,15 @@ import {
   loadMobileTurnDiff,
   type MobileUnifiedDiff,
 } from "@/client/mobileDiff";
+import {
+  browseMobileFilesystem,
+  cloneMobileRepository,
+  inferMobileProjectTitle,
+  isLikelyRemoteUrl,
+  lookupMobileRepository,
+  type MobileFilesystemEntry,
+  type MobileRepositoryInfo,
+} from "@/client/mobileFiles";
 import {
   refreshMobileGitStatus,
   runMobileGitAction,
@@ -609,24 +692,6 @@ const {
   visibleActivities,
   visibleMessages,
 } = useMobileThreadState();
-
-const fileEntries = [
-  {
-    name: "src",
-    path: "views, router, theme",
-    icon: folderOpenOutline,
-  },
-  {
-    name: "ChatPage.vue",
-    path: "chat, composer, tool sheets",
-    icon: documentTextOutline,
-  },
-  {
-    name: "SettingsPage.vue",
-    path: "connection, pairing, dark mode",
-    icon: documentTextOutline,
-  },
-] as const;
 
 type ToolId = "diff" | "git" | "files" | "terminal" | "approvals" | "connection";
 
@@ -687,6 +752,14 @@ const gitLoading = ref(false);
 const gitActionRunning = ref(false);
 const gitError = ref<string | null>(null);
 const gitCommitMessage = ref("");
+const filePathInput = ref("");
+const fileEntries = ref<readonly MobileFilesystemEntry[]>([]);
+const fileParentPath = ref("");
+const filesLoading = ref(false);
+const filesError = ref<string | null>(null);
+const cloneRepositoryInput = ref("");
+const cloneDestinationInput = ref("");
+const cloneRepositoryInfo = ref<MobileRepositoryInfo | null>(null);
 let stopGitStatusSubscription: (() => void) | null = null;
 const messages = computed(() => visibleMessages.value);
 
@@ -858,6 +931,20 @@ const canRunGitAction = computed(
     Boolean(commandSession.value && gitCwd.value && gitStatus.value?.isRepo) &&
     !gitActionRunning.value,
 );
+const filesTitle = computed(() => {
+  if (fileParentPath.value) return fileParentPath.value;
+  if (filePathInput.value.trim()) return filePathInput.value.trim();
+  return "Browse paths";
+});
+const filesStatusText = computed(() => {
+  if (!commandSession.value) return "Pair with a backend to browse desktop files.";
+  if (filesLoading.value) return "Working on the desktop backend.";
+  if (filesError.value) return filesError.value;
+  if (fileEntries.value.length > 0) {
+    return `${fileEntries.value.length} entr${fileEntries.value.length === 1 ? "y" : "ies"} found.`;
+  }
+  return "Browse a path, add it as a project, or clone a repository.";
+});
 
 const activeToolDetails = computed(() => {
   if (!activeTool.value) {
@@ -894,6 +981,7 @@ const openTool = (tool: ToolId) => {
   toolsOpen.value = false;
   if (tool === "diff") void loadFullThreadDiff();
   if (tool === "git") void startGitTool();
+  if (tool === "files") initializeFilesTool();
 };
 
 const sendComposerMessage = async () => {
@@ -1172,6 +1260,166 @@ const appendGitProgress = (entry: MobileGitProgressEntry) => {
 const stopGitTool = () => {
   stopGitStatusSubscription?.();
   stopGitStatusSubscription = null;
+};
+
+const initializeFilesTool = () => {
+  filesError.value = null;
+  if (!filePathInput.value.trim()) {
+    filePathInput.value =
+      activeProject.value?.workspaceRoot ?? activeThread.value?.worktreePath ?? "~/";
+  }
+  if (!cloneDestinationInput.value.trim()) {
+    cloneDestinationInput.value = filePathInput.value.trim();
+  }
+};
+
+const onFilePathInput = (event: { detail: { value?: string | null } }) => {
+  filePathInput.value = event.detail.value ?? "";
+};
+
+const onCloneRepositoryInput = (event: { detail: { value?: string | null } }) => {
+  cloneRepositoryInput.value = event.detail.value ?? "";
+  cloneRepositoryInfo.value = null;
+};
+
+const onCloneDestinationInput = (event: { detail: { value?: string | null } }) => {
+  cloneDestinationInput.value = event.detail.value ?? "";
+};
+
+const browseFilePath = async () => {
+  const session = commandSession.value;
+  const path = filePathInput.value.trim();
+  if (!session || !path) {
+    filesError.value = "Pair with a backend and enter a path before browsing.";
+    return;
+  }
+  filesLoading.value = true;
+  filesError.value = null;
+  try {
+    const result = await browseMobileFilesystem({
+      cwd: activeProject.value?.workspaceRoot,
+      partialPath: path,
+      session,
+    });
+    fileParentPath.value = result.parentPath;
+    fileEntries.value = result.entries;
+    if (result.parentPath) filePathInput.value = result.parentPath;
+  } catch (error) {
+    filesError.value = error instanceof Error ? error.message : "Filesystem browse failed.";
+    fileEntries.value = [];
+  } finally {
+    filesLoading.value = false;
+  }
+};
+
+const browseToEntry = async (path: string) => {
+  filePathInput.value = path;
+  await browseFilePath();
+};
+
+const browseParentPath = async () => {
+  if (!fileParentPath.value) return;
+  const parent = fileParentPath.value
+    .replace(/[/\\]+$/, "")
+    .split(/[/\\]/)
+    .slice(0, -1)
+    .join("/");
+  filePathInput.value = parent || "/";
+  await browseFilePath();
+};
+
+const addProject = async () => {
+  const workspaceRoot = filePathInput.value.trim();
+  if (!workspaceRoot) {
+    filesError.value = "Enter a desktop path before adding a project.";
+    return;
+  }
+  const created = await dispatchOutboxCommand({
+    intent: "project",
+    payload: buildProjectCreateOutboxPayload({
+      modelSelection: resolveModelSelection(),
+      projectId: createMobileEntityId("project"),
+      title: inferMobileProjectTitle(workspaceRoot),
+      workspaceRoot,
+    }),
+    type: "project.create",
+  });
+  if (created) {
+    filesError.value = null;
+  }
+};
+
+const lookupCloneRepository = async () => {
+  const session = commandSession.value;
+  const repository = cloneRepositoryInput.value.trim();
+  if (!session || !repository) {
+    filesError.value = "Pair with a backend and enter a repository before lookup.";
+    return;
+  }
+  if (isLikelyRemoteUrl(repository)) {
+    cloneRepositoryInfo.value = null;
+    filesError.value = "Direct URLs can be cloned without lookup.";
+    return;
+  }
+  filesLoading.value = true;
+  filesError.value = null;
+  try {
+    cloneRepositoryInfo.value = await lookupMobileRepository({
+      provider: "github",
+      repository,
+      session,
+    });
+    if (!cloneDestinationInput.value.trim()) {
+      cloneDestinationInput.value = `${filePathInput.value.replace(/[/\\]+$/, "")}/${repository
+        .split("/")
+        .at(-1)}`;
+    }
+  } catch (error) {
+    filesError.value = error instanceof Error ? error.message : "Repository lookup failed.";
+  } finally {
+    filesLoading.value = false;
+  }
+};
+
+const cloneRepository = async () => {
+  const session = commandSession.value;
+  const repository = cloneRepositoryInput.value.trim();
+  const destinationPath = cloneDestinationInput.value.trim();
+  if (!session || !repository || !destinationPath) {
+    filesError.value = "Enter a repository and destination before cloning.";
+    return;
+  }
+  filesLoading.value = true;
+  filesError.value = null;
+  try {
+    const result = await cloneMobileRepository({
+      destinationPath,
+      protocol: "auto",
+      remoteUrl: isLikelyRemoteUrl(repository) ? repository : cloneRepositoryInfo.value?.sshUrl,
+      repository: isLikelyRemoteUrl(repository) ? null : repository,
+      session,
+    });
+    filePathInput.value = result.cwd;
+    await addProjectForWorkspace(result.cwd);
+    await browseFilePath();
+  } catch (error) {
+    filesError.value = error instanceof Error ? error.message : "Clone failed.";
+  } finally {
+    filesLoading.value = false;
+  }
+};
+
+const addProjectForWorkspace = async (workspaceRoot: string) => {
+  await dispatchOutboxCommand({
+    intent: "project",
+    payload: buildProjectCreateOutboxPayload({
+      modelSelection: resolveModelSelection(),
+      projectId: createMobileEntityId("project"),
+      title: inferMobileProjectTitle(workspaceRoot),
+      workspaceRoot,
+    }),
+    type: "project.create",
+  });
 };
 
 const applyModelSelection = async (selection: MobileModelSelection) => {
@@ -1881,6 +2129,7 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 }
 
 .diff-toolbar,
+.files-toolbar,
 .git-toolbar {
   display: flex;
   align-items: flex-start;
@@ -1894,18 +2143,22 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 
 .diff-toolbar h2,
 .diff-toolbar p,
+.files-toolbar h2,
+.files-toolbar p,
 .git-toolbar h2,
 .git-toolbar p {
   margin: 0;
 }
 
 .diff-toolbar h2,
+.files-toolbar h2,
 .git-toolbar h2 {
   font-size: 1.25rem;
   line-height: 1.2;
 }
 
 .diff-toolbar p:not(.eyebrow),
+.files-toolbar p:not(.eyebrow),
 .git-toolbar p:not(.eyebrow) {
   color: var(--ion-color-medium);
   line-height: 1.45;
@@ -1913,7 +2166,8 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 
 .diff-actions,
 .diff-file-list,
-.git-actions {
+.git-actions,
+.path-controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1941,6 +2195,7 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 }
 
 .diff-files,
+.file-list,
 .git-files,
 .git-progress {
   border: 1px solid var(--t3-panel-border);
@@ -1951,6 +2206,8 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 
 .diff-files h2,
 .diff-files p,
+.file-list h2,
+.file-list p,
 .git-files h2,
 .git-files p,
 .git-progress h2,
@@ -1959,6 +2216,7 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 }
 
 .diff-files h2,
+.file-list h2,
 .git-files h2 {
   font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 0.82rem;
@@ -1985,6 +2243,25 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
   --padding-top: 0.75rem;
   border: 1px solid var(--t3-panel-border);
   border-radius: var(--t3-panel-radius);
+}
+
+.path-input {
+  --background: var(--t3-panel-background);
+  --border-radius: 999px;
+  --padding-end: 0.85rem;
+  --padding-start: 0.85rem;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: 999px;
+  min-height: 2.35rem;
+}
+
+.clone-panel {
+  display: grid;
+  gap: 0.65rem;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: var(--t3-panel-radius);
+  background: var(--t3-panel-background);
+  padding: 0.9rem;
 }
 
 .diff-preview,

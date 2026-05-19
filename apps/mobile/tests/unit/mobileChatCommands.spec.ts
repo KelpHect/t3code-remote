@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   buildInterruptOutboxPayload,
+  buildProjectCreateOutboxPayload,
   buildThreadInteractionModeOutboxPayload,
   buildThreadMetaUpdateOutboxPayload,
   buildThreadRuntimeModeOutboxPayload,
@@ -125,7 +126,27 @@ describe("mobile chat commands", () => {
 
   test("creates mobile entity ids and concise title seeds", () => {
     expect(createMobileEntityId("thread", () => "uuid-1")).toBe("mobile-thread-uuid-1");
+    expect(createMobileEntityId("project", () => "uuid-2")).toBe("mobile-project-uuid-2");
     expect(createTitleSeed("  This   is a concise title  ")).toBe("This is a concise title");
     expect(createTitleSeed("x".repeat(80))).toBe(`${"x".repeat(61)}...`);
+  });
+
+  test("builds project create payloads", () => {
+    expect(
+      buildProjectCreateOutboxPayload({
+        createdAt: "2026-05-19T12:00:00.000Z",
+        modelSelection: { instanceId: "codex", model: "gpt-5.5" },
+        projectId: "project-1",
+        title: "mobile",
+        workspaceRoot: "/repo/mobile",
+      }),
+    ).toEqual({
+      createWorkspaceRootIfMissing: true,
+      createdAt: "2026-05-19T12:00:00.000Z",
+      defaultModelSelection: { instanceId: "codex", model: "gpt-5.5" },
+      projectId: "project-1",
+      title: "mobile",
+      workspaceRoot: "/repo/mobile",
+    });
   });
 });

@@ -366,9 +366,19 @@ change backend behavior.
       refresh/commit/push/commit+push/PR action buttons, streamed progress, and
       error/empty states. Unit tests cover status mapping, stream reduction, and
       progress mapping.
-- [ ] Add filesystem browse, project creation, and clone repository.
+- [x] Add filesystem browse, project creation, and clone repository.
       Acceptance: browse desktop paths, create project records, clone repos, and
       report permission/clone failures without backend changes.
+      Evidence: `apps/mobile/src/client/ws/existingBackendClient.ts` wraps
+      existing `filesystem.browse`, `sourceControl.lookupRepository`, and
+      `sourceControl.cloneRepository` methods, `apps/mobile/src/client/mobileFiles.ts`
+      maps browse, repository lookup, clone results, remote URL detection, and
+      project title inference inside app-owned DTOs, `apps/mobile/src/client/mobileChatCommands.ts`
+      builds existing `project.create` orchestration payloads with mobile project
+      IDs, and `apps/mobile/src/views/ChatPage.vue` replaces the Files
+      placeholder with path browsing, add-project, repository lookup, clone+add,
+      and permission/clone error states. Unit tests cover browse/result mapping,
+      clone mapping, URL detection, title inference, and project-create payloads.
 - [ ] Add terminal scrollback and input.
       Acceptance: open/write/resize/clear/restart/close work for selected
       thread/project; output is bounded or virtualized.

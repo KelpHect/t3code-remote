@@ -82,6 +82,18 @@ export class ExistingBackendClient {
     return this.transport.requestStream("git.runStackedAction", input, listener, options);
   }
 
+  browseFilesystem(input: Record<string, unknown>) {
+    return this.transport.request<unknown>("filesystem.browse", input);
+  }
+
+  lookupRepository(input: Record<string, unknown>) {
+    return this.transport.request<unknown>("sourceControl.lookupRepository", input);
+  }
+
+  cloneRepository(input: Record<string, unknown>) {
+    return this.transport.request<unknown>("sourceControl.cloneRepository", input);
+  }
+
   getConfig() {
     return this.transport.request<unknown>("server.getConfig", {});
   }
