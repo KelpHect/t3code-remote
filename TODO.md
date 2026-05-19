@@ -252,9 +252,14 @@ client/state modules first; UI consumes state rather than owning transport.
       failed commands, replays queued send/continue/stop intents, and removes
       commands only on success/cancel; `apps/mobile/tests/unit/commandOutbox.spec.ts`
       covers those paths.
-- [ ] Implement sequence filtering for shell/thread events.
+- [x] Implement sequence filtering for shell/thread events.
       Acceptance: stale or duplicate events do not regress project/thread/chat
       state.
+      Evidence: `apps/mobile/src/client/sequenceFilter.ts` tracks increasing
+      `sequence`/`snapshotSequence` values per shell/thread scope and ignores
+      stale, duplicate, or malformed updates; `apps/mobile/tests/unit/sequenceFilter.spec.ts`
+      verifies shell events, thread snapshots, independent scopes, and malformed
+      updates.
 - [ ] Keep composer drafts local per device.
       Acceptance: drafts survive screen navigation and app backgrounding but do
       not sync to the backend.
