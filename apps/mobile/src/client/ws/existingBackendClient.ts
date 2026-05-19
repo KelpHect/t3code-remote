@@ -44,6 +44,13 @@ export class ExistingBackendClient {
     });
   }
 
+  dispatchCommand(command: Record<string, unknown>) {
+    return this.transport.request<{ readonly sequence: number }>(
+      "orchestration.dispatchCommand",
+      command,
+    );
+  }
+
   dispose() {
     this.transport.dispose();
   }

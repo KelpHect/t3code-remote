@@ -13,6 +13,7 @@ export interface MobileShellProject {
   readonly title: string;
   readonly workspaceRoot: string | null;
   readonly repositoryDisplayName: string | null;
+  readonly defaultModelSelection: Record<string, unknown> | null;
   readonly updatedAt: string | null;
 }
 
@@ -21,6 +22,7 @@ export interface MobileShellThread {
   readonly projectId: string;
   readonly title: string;
   readonly modelLabel: string | null;
+  readonly modelSelection: Record<string, unknown> | null;
   readonly runtimeMode: string | null;
   readonly interactionMode: string | null;
   readonly branch: string | null;
@@ -273,6 +275,9 @@ function mapMobileProject(payload: unknown): MobileShellProject | null {
     ? payload.repositoryIdentity
     : null;
   return {
+    defaultModelSelection: isObject(payload.defaultModelSelection)
+      ? payload.defaultModelSelection
+      : null,
     id,
     repositoryDisplayName: readString(repositoryIdentity?.displayName),
     title,
@@ -299,6 +304,7 @@ function mapMobileThread(payload: unknown): MobileShellThread | null {
     interactionMode: readString(payload.interactionMode),
     latestUserMessageAt: readString(payload.latestUserMessageAt),
     modelLabel: formatModelLabel(modelSelection),
+    modelSelection,
     projectId,
     runtimeMode: readString(payload.runtimeMode),
     title,

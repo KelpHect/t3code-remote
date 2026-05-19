@@ -305,9 +305,20 @@ change backend behavior.
       prompt cards, and `apps/mobile/tests/unit/mobileThread.spec.ts` covers
       snapshot mapping, live events, stale/other-thread rejection, and pending
       prompt derivation.
-- [ ] Implement send, continue, stop, and new thread/project chat flows.
+- [x] Implement send, continue, stop, and new thread/project chat flows.
       Acceptance: commands use client-generated command IDs and sync with
       desktop state.
+      Evidence: `apps/mobile/src/client/mobileChatCommands.ts` builds existing
+      backend `thread.turn.start` and `thread.turn.interrupt` payloads,
+      including mobile-generated message/thread IDs and bootstrap metadata for
+      new-thread starts under the selected project,
+      `apps/mobile/src/client/ws/existingBackendClient.ts` dispatches commands
+      through the existing `/ws` `orchestration.dispatchCommand` method,
+      `apps/mobile/src/views/ChatPage.vue` wires send, continue, stop, and
+      new-chat composer paths through the persistent mobile command outbox, and
+      `apps/mobile/tests/unit/mobileChatCommands.spec.ts` plus existing outbox
+      tests cover payloads, generated IDs, bootstrap metadata, interrupt
+      payloads, and reconnect replay semantics.
 - [ ] Wire model, runtime mode, and interaction mode controls.
       Acceptance: options come from backend-supported config where available and
       dispatch with chat commands.

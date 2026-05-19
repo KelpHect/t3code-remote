@@ -56,6 +56,9 @@
             <ion-icon slot="start" :icon="codeSlashOutline" />
             Build
           </ion-button>
+          <ion-button fill="outline" size="small" shape="round" @click="continueThread">
+            Continue
+          </ion-button>
           <ion-button fill="outline" size="small" shape="round" @click="openTool('diff')">
             Diff
           </ion-button>
@@ -118,6 +121,7 @@
           </div>
 
           <p v-if="messages.length === 0" class="empty-thread-note">{{ threadEmptyCopy }}</p>
+          <p v-if="commandError" class="command-error" role="alert">{{ commandError }}</p>
 
           <article
             v-for="message in messages"
@@ -158,10 +162,21 @@
             :value="composerText"
             @ionInput="onComposerInput"
           />
-          <ion-button shape="round" aria-label="Send message">
+          <ion-button
+            shape="round"
+            aria-label="Send message"
+            :disabled="commandBusy"
+            @click="sendComposerMessage"
+          >
             <ion-icon slot="icon-only" :icon="arrowUpOutline" />
           </ion-button>
-          <ion-button fill="clear" class="stop-button" aria-label="Stop current run">
+          <ion-button
+            fill="clear"
+            class="stop-button"
+            aria-label="Stop current run"
+            :disabled="commandBusy"
+            @click="stopCurrentRun"
+          >
             <ion-icon slot="icon-only" :icon="stopCircleOutline" />
           </ion-button>
         </div>
@@ -366,7 +381,17 @@ import {
   stopCircleOutline,
 } from "ionicons/icons";
 
+import {
+  buildInterruptOutboxPayload,
+  buildTurnStartOutboxPayload,
+  createCommandDispatcher,
+  createFallbackModelSelection,
+  createMobileEntityId,
+  createTitleSeed,
+  type MobileModelSelection,
+} from "@/client/mobileChatCommands";
 import { mobileComposerDrafts, type ComposerDraftRef } from "@/client/composerDrafts";
+import { mobileCommandOutbox, type NewMobileOutboxCommand } from "@/client/commandOutbox";
 import { useConnectionState } from "@/client/connectionState";
 import { useMobileShellState } from "@/client/mobileShell";
 import { useMobileThreadState } from "@/client/mobileThread";
@@ -383,7 +408,8 @@ const {
   statusText,
   validBackends,
 } = useConnectionState();
-const { activeProject, activeThread, activeThreadId, shellSync } = useMobileShellState();
+const { activeProject, activeThread, activeThreadId, selectThread, shellSync } =
+  useMobileShellState();
 const {
   activeThreadDetail,
   pendingApprovals,
@@ -453,6 +479,8 @@ const toolsOpen = ref(false);
 const activeTool = ref<ToolId | null>(null);
 const emptyChat = ref(false);
 const composerText = ref("");
+const commandBusy = ref(false);
+const commandError = ref<string | null>(null);
 const messages = computed(() => visibleMessages.value);
 
 const activeDraftRef = computed<ComposerDraftRef>(() => ({
@@ -523,6 +551,13 @@ const threadEmptyCopy = computed(() => {
   if (threadSync.value.status === "failed") return threadSync.value.message;
   return "No messages in this thread yet.";
 });
+const commandSession = computed(() => {
+  if (!pairedBackendUrl.value || !bearerSession.value) return null;
+  return {
+    backendUrl: pairedBackendUrl.value,
+    sessionToken: bearerSession.value.sessionToken,
+  };
+});
 
 const activeToolDetails = computed(() => {
   if (!activeTool.value) {
@@ -546,6 +581,7 @@ const setToolsOpen = (open: boolean) => {
 
 const setEmptyChat = (empty: boolean) => {
   emptyChat.value = empty;
+  commandError.value = null;
 };
 
 const onComposerInput = (event: { detail: { value?: string | null } }) => {
@@ -555,6 +591,134 @@ const onComposerInput = (event: { detail: { value?: string | null } }) => {
 const openTool = (tool: ToolId) => {
   activeTool.value = tool;
   toolsOpen.value = false;
+};
+
+const sendComposerMessage = async () => {
+  const text = composerText.value.trim();
+  if (!text) return;
+  const sent = await dispatchTurn(text, "send");
+  if (sent) {
+    composerText.value = "";
+    mobileComposerDrafts.save(activeDraftRef.value, "");
+  }
+};
+
+const continueThread = async () => {
+  await dispatchTurn("Continue.", "continue");
+};
+
+const stopCurrentRun = async () => {
+  const thread = activeThread.value;
+  if (!thread) {
+    commandError.value = "Select a thread before stopping a run.";
+    return;
+  }
+  await dispatchOutboxCommand({
+    intent: "stop",
+    payload: buildInterruptOutboxPayload({
+      threadId: thread.id,
+      turnId: activeThreadDetail.value.session?.activeTurnId,
+    }),
+    type: "thread.turn.interrupt",
+  });
+};
+
+const dispatchTurn = async (text: string, intent: "send" | "continue") => {
+  const target = resolveTurnTarget(text);
+  if (!target) return false;
+  const dispatched = await dispatchOutboxCommand({
+    intent,
+    payload: buildTurnStartOutboxPayload({
+      bootstrap: target.bootstrap,
+      interactionMode: target.interactionMode,
+      messageId: createMobileEntityId("message"),
+      modelSelection: target.modelSelection,
+      runtimeMode: target.runtimeMode,
+      text,
+      threadId: target.threadId,
+      titleSeed: target.titleSeed,
+    }),
+    type: "thread.turn.start",
+  });
+  if (!dispatched) return false;
+  if (target.createdThreadId) {
+    selectThread(target.createdThreadId);
+    emptyChat.value = false;
+  }
+  return true;
+};
+
+const dispatchOutboxCommand = async (command: NewMobileOutboxCommand) => {
+  const session = commandSession.value;
+  if (!session) {
+    commandError.value = "Pair with a backend before dispatching commands.";
+    return false;
+  }
+  commandBusy.value = true;
+  commandError.value = null;
+  try {
+    const dispatch = createCommandDispatcher(session);
+    await mobileCommandOutbox.dispatchNew(command, dispatch);
+    await mobileCommandOutbox.replay(dispatch);
+    return true;
+  } catch (error) {
+    commandError.value = error instanceof Error ? error.message : "Command dispatch failed.";
+    return false;
+  } finally {
+    commandBusy.value = false;
+  }
+};
+
+const resolveTurnTarget = (text: string) => {
+  const thread = activeThread.value;
+  const project = activeProject.value;
+  const runtimeMode = thread?.runtimeMode ?? "full-access";
+  const interactionMode = thread?.interactionMode ?? "default";
+  const modelSelection = resolveModelSelection();
+  const titleSeed = createTitleSeed(text);
+  if (thread && !emptyChat.value) {
+    return {
+      bootstrap: undefined,
+      createdThreadId: null,
+      interactionMode,
+      modelSelection,
+      runtimeMode,
+      threadId: thread.id,
+      titleSeed,
+    };
+  }
+  if (!project) {
+    commandError.value = "Select a project before starting a new chat.";
+    return null;
+  }
+  const threadId = createMobileEntityId("thread");
+  const createdAt = new Date().toISOString();
+  return {
+    bootstrap: {
+      branch: thread?.branch ?? null,
+      createdAt,
+      interactionMode,
+      modelSelection,
+      projectId: project.id,
+      runtimeMode,
+      title: titleSeed,
+      worktreePath: thread?.worktreePath ?? null,
+    },
+    createdThreadId: threadId,
+    interactionMode,
+    modelSelection,
+    runtimeMode,
+    threadId,
+    titleSeed,
+  };
+};
+
+const resolveModelSelection = (): MobileModelSelection => {
+  const threadSelection = activeThread.value?.modelSelection;
+  const projectSelection = activeProject.value?.defaultModelSelection;
+  if (isModelSelection(threadSelection)) return threadSelection;
+  if (isModelSelection(projectSelection)) return projectSelection;
+  return createFallbackModelSelection();
 };
 
 const loadComposerDraft = (ref: ComposerDraftRef) => {
@@ -654,6 +818,10 @@ const toolActionButtons = [
     role: "cancel",
   },
 ];
+
+function isModelSelection(value: unknown): value is MobileModelSelection {
+  return typeof value === "object" && value !== null && "model" in value;
+}
 </script>
 
 <style scoped>
@@ -837,6 +1005,16 @@ const toolActionButtons = [
 .empty-thread-note {
   padding: 1rem 0;
   text-align: center;
+}
+
+.command-error {
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--ion-color-danger) 45%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--ion-color-danger) 10%, transparent);
+  color: var(--ion-color-danger);
+  padding: 0.85rem;
+  line-height: 1.45;
 }
 
 .empty-chat {

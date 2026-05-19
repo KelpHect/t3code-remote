@@ -41,6 +41,7 @@ describe("mobile shell state", () => {
     expect(state.sequence).toBe(10);
     expect(state.projects).toEqual([
       {
+        defaultModelSelection: null,
         id: "project-1",
         repositoryDisplayName: "owner/t3code-remote",
         title: "t3code-remote",
@@ -54,6 +55,10 @@ describe("mobile shell state", () => {
       hasPendingApprovals: false,
       interactionMode: "default",
       modelLabel: "codex · gpt-5.5",
+      modelSelection: {
+        instanceId: "codex",
+        model: "gpt-5.5",
+      },
       runtimeMode: "full-access",
     });
   });
