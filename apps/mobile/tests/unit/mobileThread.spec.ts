@@ -33,6 +33,25 @@ describe("mobile thread state", () => {
             }),
           ],
           activities: [makeActivity({ id: "activity-1", summary: "Ran command" })],
+          checkpoints: [
+            {
+              assistantMessageId: "assistant-1",
+              checkpointRef: "checkpoint-1",
+              checkpointTurnCount: 1,
+              completedAt: "2026-05-19T10:03:00.000Z",
+              files: [
+                {
+                  additions: 4,
+                  deletions: 1,
+                  newPath: "README.md",
+                  oldPath: "README.md",
+                  status: "modified",
+                },
+              ],
+              status: "completed",
+              turnId: "turn-1",
+            },
+          ],
           proposedPlans: [],
           session: {
             activeTurnId: "turn-1",
@@ -60,6 +79,27 @@ describe("mobile thread state", () => {
       providerName: "Codex",
       status: "running",
     });
+    expect(state.turnDiffSummaries).toEqual([
+      {
+        assistantMessageId: "assistant-1",
+        checkpointRef: "checkpoint-1",
+        checkpointTurnCount: 1,
+        completedAt: "2026-05-19T10:03:00.000Z",
+        files: [
+          {
+            additions: 4,
+            deletions: 1,
+            newPath: "README.md",
+            oldPath: "README.md",
+            path: "README.md",
+            status: "modified",
+          },
+        ],
+        id: "turn-1",
+        status: "completed",
+        turnId: "turn-1",
+      },
+    ]);
   });
 
   test("applies live message and activity events by increasing sequence", () => {
@@ -134,6 +174,38 @@ describe("mobile thread state", () => {
 
     expect(stale).toEqual(state);
     expect(otherThread).toEqual(state);
+  });
+
+  test("applies live turn diff summaries by increasing sequence", () => {
+    const initial: MobileThreadDetail = {
+      ...createEmptyMobileThreadDetail("thread-1"),
+      sequence: 10,
+    };
+
+    const state = reduceMobileThreadStreamItem(initial, {
+      kind: "event",
+      event: {
+        aggregateId: "thread-1",
+        payload: {
+          checkpointRef: "checkpoint-2",
+          checkpointTurnCount: 2,
+          completedAt: "2026-05-19T10:05:00.000Z",
+          files: [{ newPath: "TODO.md", oldPath: "TODO.md", status: "modified" }],
+          status: "completed",
+          threadId: "thread-1",
+          turnId: "turn-2",
+        },
+        sequence: 11,
+        type: "thread.turn-diff-completed",
+      },
+    });
+
+    expect(state.turnDiffSummaries).toHaveLength(1);
+    expect(state.turnDiffSummaries[0]).toMatchObject({
+      checkpointTurnCount: 2,
+      files: [{ path: "TODO.md", status: "modified" }],
+      turnId: "turn-2",
+    });
   });
 
   test("derives pending approvals and user-input prompts from activities", () => {

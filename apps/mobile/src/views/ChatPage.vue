@@ -291,17 +291,52 @@
       </ion-header>
       <ion-content class="sheet-content">
         <section v-if="activeTool === 'diff'" class="tool-workspace">
-          <div class="tool-summary">
-            <ion-badge color="primary">3 files</ion-badge>
-            <span>Unified preview</span>
+          <div class="diff-toolbar">
+            <div>
+              <p class="eyebrow">Unified diff</p>
+              <h2>{{ diffTitle }}</h2>
+              <p>{{ diffStatusText }}</p>
+            </div>
+            <ion-spinner v-if="diffLoading" name="crescent" />
           </div>
-          <pre
-            class="diff-preview"
-          ><code><span class="diff-file">apps/mobile/src/views/ChatPage.vue</span>
-<span class="diff-add">+ &lt;ion-modal&gt;Thread tools&lt;/ion-modal&gt;</span>
-<span class="diff-add">+ &lt;section class="terminal-preview"&gt;</span>
-<span class="diff-del">- Static placeholder until /ws compatibility</span>
-<span class="diff-context">  Composer remains pinned above navigation.</span></code></pre>
+          <div class="diff-actions">
+            <ion-button size="small" shape="round" @click="loadFullThreadDiff">
+              Full thread
+            </ion-button>
+            <ion-button fill="outline" size="small" shape="round" @click="loadLatestTurnDiff">
+              Latest turn
+            </ion-button>
+            <ion-item lines="none" class="diff-toggle">
+              <ion-label>Ignore whitespace</ion-label>
+              <ion-toggle :checked="diffIgnoreWhitespace" @ionChange="onDiffWhitespaceToggle" />
+            </ion-item>
+          </div>
+          <div v-if="activeDiff" class="diff-file-list" aria-label="Changed files">
+            <ion-badge color="primary">
+              {{ activeDiff.files.length }} file{{ activeDiff.files.length === 1 ? "" : "s" }}
+            </ion-badge>
+            <span>{{ activeDiff.lineCount }} line{{ activeDiff.lineCount === 1 ? "" : "s" }}</span>
+            <span v-if="activeDiff.truncated">Preview truncated</span>
+            <span v-if="activeDiff.binary">Binary content</span>
+          </div>
+          <ion-list v-if="activeDiff?.files.length" lines="full" class="diff-files">
+            <ion-item v-for="file in activeDiff.files" :key="file.path">
+              <ion-label>
+                <h2>{{ file.path }}</h2>
+                <p>
+                  <span class="diff-add">+{{ file.additions }}</span>
+                  <span class="diff-del">-{{ file.deletions }}</span>
+                  <span v-if="file.status"> {{ file.status }}</span>
+                </p>
+              </ion-label>
+            </ion-item>
+          </ion-list>
+          <p v-if="diffError" class="command-error" role="alert">{{ diffError }}</p>
+          <p v-else-if="activeDiff?.empty" class="empty-thread-note">
+            No diff is available for this checkpoint range.
+          </p>
+          <pre v-else-if="activeDiff" class="diff-preview"><code>{{ activeDiff.diff }}</code></pre>
+          <p v-else class="empty-thread-note">Select a thread with completed checkpoints.</p>
         </section>
 
         <section v-else-if="activeTool === 'git'" class="tool-workspace">
@@ -422,6 +457,7 @@ import {
   IonSpinner,
   IonTextarea,
   IonTitle,
+  IonToggle,
   IonToolbar,
 } from "@ionic/vue";
 import {
@@ -452,6 +488,11 @@ import {
 import { mobileComposerDrafts, type ComposerDraftRef } from "@/client/composerDrafts";
 import { mobileCommandOutbox, type NewMobileOutboxCommand } from "@/client/commandOutbox";
 import { useConnectionState } from "@/client/connectionState";
+import {
+  loadMobileFullThreadDiff,
+  loadMobileTurnDiff,
+  type MobileUnifiedDiff,
+} from "@/client/mobileDiff";
 import {
   formatMobileModelSelection,
   loadMobileModelChoices,
@@ -559,6 +600,11 @@ const modelChoices = ref<readonly MobileModelChoice[]>([]);
 const draftModelSelection = ref<MobileModelSelection | null>(null);
 const draftRuntimeMode = ref<MobileRuntimeMode | null>(null);
 const draftInteractionMode = ref<MobileInteractionMode | null>(null);
+const activeDiff = ref<MobileUnifiedDiff | null>(null);
+const diffLoading = ref(false);
+const diffError = ref<string | null>(null);
+const diffMode = ref<"full" | "latest">("full");
+const diffIgnoreWhitespace = ref(false);
 const messages = computed(() => visibleMessages.value);
 
 const activeDraftRef = computed<ComposerDraftRef>(() => ({
@@ -675,6 +721,25 @@ const modelConfigStatusText = computed(() => {
   }
   return "Using the current thread model until backend config loads.";
 });
+const latestDiffSummary = computed(() => activeThreadDetail.value.turnDiffSummaries.at(-1) ?? null);
+const previousDiffSummary = computed(() => {
+  const summaries = activeThreadDetail.value.turnDiffSummaries;
+  return summaries.length > 1 ? summaries[summaries.length - 2] : null;
+});
+const diffTitle = computed(() => {
+  if (!activeThread.value) return "No thread selected";
+  if (diffMode.value === "latest") return "Latest turn";
+  return "Full thread";
+});
+const diffStatusText = computed(() => {
+  if (diffLoading.value) return "Loading diff from the desktop backend.";
+  if (diffError.value) return diffError.value;
+  if (!activeThread.value) return "Select a thread before loading diffs.";
+  if (!latestDiffSummary.value) return "No completed checkpoints are available yet.";
+  if (!activeDiff.value) return "Load a checkpoint diff for this thread.";
+  if (activeDiff.value.empty) return "The selected range has no file changes.";
+  return `${activeDiff.value.files.length} changed file${activeDiff.value.files.length === 1 ? "" : "s"}.`;
+});
 
 const activeToolDetails = computed(() => {
   if (!activeTool.value) {
@@ -709,6 +774,7 @@ const onComposerInput = (event: { detail: { value?: string | null } }) => {
 const openTool = (tool: ToolId) => {
   activeTool.value = tool;
   toolsOpen.value = false;
+  if (tool === "diff") void loadFullThreadDiff();
 };
 
 const sendComposerMessage = async () => {
@@ -820,6 +886,70 @@ const refreshProviderModels = async () => {
   } finally {
     modelConfigLoading.value = false;
   }
+};
+
+const loadFullThreadDiff = async () => {
+  const session = commandSession.value;
+  const thread = activeThread.value;
+  const summary = latestDiffSummary.value;
+  if (!session || !thread || !summary) {
+    diffError.value = "Select a paired thread with completed checkpoints.";
+    activeDiff.value = null;
+    return;
+  }
+  diffMode.value = "full";
+  diffLoading.value = true;
+  diffError.value = null;
+  try {
+    activeDiff.value = await loadMobileFullThreadDiff({
+      ignoreWhitespace: diffIgnoreWhitespace.value,
+      session,
+      threadId: thread.id,
+      toTurnCount: summary.checkpointTurnCount,
+    });
+  } catch (error) {
+    diffError.value = error instanceof Error ? error.message : "Full thread diff failed.";
+    activeDiff.value = null;
+  } finally {
+    diffLoading.value = false;
+  }
+};
+
+const loadLatestTurnDiff = async () => {
+  const session = commandSession.value;
+  const thread = activeThread.value;
+  const summary = latestDiffSummary.value;
+  if (!session || !thread || !summary) {
+    diffError.value = "Select a paired thread with completed checkpoints.";
+    activeDiff.value = null;
+    return;
+  }
+  diffMode.value = "latest";
+  diffLoading.value = true;
+  diffError.value = null;
+  try {
+    activeDiff.value = await loadMobileTurnDiff({
+      fromTurnCount: previousDiffSummary.value?.checkpointTurnCount ?? 0,
+      ignoreWhitespace: diffIgnoreWhitespace.value,
+      session,
+      threadId: thread.id,
+      toTurnCount: summary.checkpointTurnCount,
+    });
+  } catch (error) {
+    diffError.value = error instanceof Error ? error.message : "Latest turn diff failed.";
+    activeDiff.value = null;
+  } finally {
+    diffLoading.value = false;
+  }
+};
+
+const onDiffWhitespaceToggle = (event: { detail: { checked?: boolean } }) => {
+  diffIgnoreWhitespace.value = event.detail.checked === true;
+  if (diffMode.value === "latest") {
+    void loadLatestTurnDiff();
+    return;
+  }
+  void loadFullThreadDiff();
 };
 
 const applyModelSelection = async (selection: MobileModelSelection) => {
@@ -978,6 +1108,8 @@ watch(
     draftModelSelection.value = null;
     draftRuntimeMode.value = null;
     draftInteractionMode.value = null;
+    activeDiff.value = null;
+    diffError.value = null;
     commandError.value = null;
   },
 );
@@ -1503,6 +1635,76 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
   gap: 0.65rem;
   color: var(--ion-color-medium);
   font-size: 0.9rem;
+}
+
+.diff-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: 1rem;
+  background: var(--t3-panel-background);
+  padding: 1rem;
+}
+
+.diff-toolbar h2,
+.diff-toolbar p {
+  margin: 0;
+}
+
+.diff-toolbar h2 {
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.diff-toolbar p:not(.eyebrow) {
+  color: var(--ion-color-medium);
+  line-height: 1.45;
+}
+
+.diff-actions,
+.diff-file-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.diff-actions ion-button {
+  margin: 0;
+}
+
+.diff-toggle {
+  --background: var(--t3-panel-background);
+  --border-radius: 999px;
+  --inner-border-width: 0;
+  --min-height: 2.25rem;
+  max-width: 100%;
+  border: 1px solid var(--t3-panel-border);
+  border-radius: 999px;
+}
+
+.diff-file-list {
+  color: var(--ion-color-medium);
+  font-size: 0.86rem;
+}
+
+.diff-files {
+  border: 1px solid var(--t3-panel-border);
+  border-radius: var(--t3-panel-radius);
+  background: var(--t3-panel-background);
+  overflow: hidden;
+}
+
+.diff-files h2,
+.diff-files p {
+  margin: 0;
+}
+
+.diff-files h2 {
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.82rem;
 }
 
 .diff-preview,

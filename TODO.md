@@ -337,9 +337,21 @@ change backend behavior.
 
 ### Tools
 
-- [ ] Add unified diff viewer.
+- [x] Add unified diff viewer.
       Acceptance: loads turn/full-thread diffs, handles empty/binary states, and
       renders large patches without freezing.
+      Evidence: `apps/mobile/src/client/ws/existingBackendClient.ts` now exposes
+      `orchestration.getTurnDiff` and `orchestration.getFullThreadDiff`,
+      `apps/mobile/src/client/mobileThread.ts` maps checkpoint/turn-diff
+      summaries from thread snapshots and live `thread.turn-diff-completed`
+      events, `apps/mobile/src/client/mobileDiff.ts` loads full-thread and
+      latest-turn diffs, supports current `diff` string and legacy file-only
+      result shapes, detects empty/binary patches, parses changed file stats,
+      and bounds large patch rendering, and `apps/mobile/src/views/ChatPage.vue`
+      replaces the static diff placeholder with a real unified diff sheet,
+      changed-file list, whitespace toggle, loading/error/empty states, and
+      latest/full controls. Unit tests cover diff parsing, large-patch bounding,
+      legacy result mapping, and live checkpoint summary updates.
 - [ ] Add git status and action progress.
       Acceptance: refresh, commit, push, commit+push, and PR prep stream progress
       with clear high-impact action affordances.

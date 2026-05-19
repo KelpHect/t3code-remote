@@ -74,6 +74,24 @@ export interface MobileProposedPlan {
   readonly updatedAt: string | null;
 }
 
+export interface MobileTurnDiffSummary {
+  readonly id: string;
+  readonly turnId: string;
+  readonly checkpointTurnCount: number;
+  readonly checkpointRef: string | null;
+  readonly status: string | null;
+  readonly assistantMessageId: string | null;
+  readonly completedAt: string | null;
+  readonly files: readonly {
+    readonly path: string;
+    readonly oldPath: string | null;
+    readonly newPath: string | null;
+    readonly status: string | null;
+    readonly additions: number | null;
+    readonly deletions: number | null;
+  }[];
+}
+
 export interface MobileThreadDetail {
   readonly threadId: string | null;
   readonly projectId: string | null;
@@ -82,6 +100,7 @@ export interface MobileThreadDetail {
   readonly messages: readonly MobileThreadMessage[];
   readonly activities: readonly MobileThreadActivity[];
   readonly proposedPlans: readonly MobileProposedPlan[];
+  readonly turnDiffSummaries: readonly MobileTurnDiffSummary[];
   readonly session: MobileThreadSession | null;
   readonly updatedAt: string | null;
   readonly deleted: boolean;
@@ -120,6 +139,7 @@ export function createEmptyMobileThreadDetail(threadId: string | null = null): M
     session: null,
     threadId,
     title: null,
+    turnDiffSummaries: [],
     updatedAt: null,
   };
 }
@@ -283,6 +303,9 @@ function reduceThreadSnapshot(state: MobileThreadDetail, snapshot: Record<string
     session: mapMobileSession(thread.session),
     threadId,
     title: readString(thread.title),
+    turnDiffSummaries: sortTurnDiffSummaries(
+      readArray(thread.checkpoints).map(mapMobileTurnDiffSummary).filter(isPresent),
+    ),
     updatedAt: readString(thread.updatedAt),
   };
 }
@@ -321,6 +344,15 @@ function reduceThreadEvent(state: MobileThreadDetail, event: Record<string, unkn
         ...state,
         proposedPlans: sortPlans(upsertById(state.proposedPlans, proposedPlan)),
         sequence,
+      };
+    }
+    case "thread.turn-diff-completed": {
+      const summary = mapMobileTurnDiffSummary(payload);
+      if (!summary) return { ...state, sequence };
+      return {
+        ...state,
+        sequence,
+        turnDiffSummaries: sortTurnDiffSummaries(upsertById(state.turnDiffSummaries, summary)),
       };
     }
     case "thread.session-set": {
@@ -368,6 +400,39 @@ function reduceThreadEvent(state: MobileThreadDetail, event: Record<string, unkn
         sequence,
       };
   }
+}
+
+function mapMobileTurnDiffSummary(payload: unknown): MobileTurnDiffSummary | null {
+  if (!isObject(payload)) return null;
+  const turnId = readString(payload.turnId);
+  const checkpointTurnCount = readNonNegativeInt(payload.checkpointTurnCount);
+  if (!turnId || checkpointTurnCount === null) return null;
+  return {
+    assistantMessageId: readString(payload.assistantMessageId),
+    checkpointRef: readString(payload.checkpointRef),
+    checkpointTurnCount,
+    completedAt: readString(payload.completedAt),
+    files: readArray(payload.files).map(mapMobileTurnDiffFile).filter(isPresent),
+    id: turnId,
+    status: readString(payload.status),
+    turnId,
+  };
+}
+
+function mapMobileTurnDiffFile(payload: unknown) {
+  if (!isObject(payload)) return null;
+  const oldPath = readString(payload.oldPath);
+  const newPath = readString(payload.newPath);
+  const path = readString(payload.path) ?? newPath ?? oldPath;
+  if (!path) return null;
+  return {
+    additions: readNonNegativeInt(payload.additions),
+    deletions: readNonNegativeInt(payload.deletions),
+    newPath,
+    oldPath,
+    path,
+    status: readString(payload.status),
+  };
 }
 
 function mapMobileMessage(payload: unknown): MobileThreadMessage | null {
@@ -590,6 +655,14 @@ function sortActivities(activities: readonly MobileThreadActivity[]) {
 
 function sortPlans(plans: readonly MobileProposedPlan[]) {
   return plans.toSorted(compareByCreatedAt);
+}
+
+function sortTurnDiffSummaries(summaries: readonly MobileTurnDiffSummary[]) {
+  return summaries.toSorted(
+    (left, right) =>
+      left.checkpointTurnCount - right.checkpointTurnCount ||
+      left.turnId.localeCompare(right.turnId),
+  );
 }
 
 function compareByCreatedAt(

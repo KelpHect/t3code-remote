@@ -51,6 +51,14 @@ export class ExistingBackendClient {
     );
   }
 
+  getTurnDiff(input: Record<string, unknown>) {
+    return this.transport.request<unknown>("orchestration.getTurnDiff", input);
+  }
+
+  getFullThreadDiff(input: Record<string, unknown>) {
+    return this.transport.request<unknown>("orchestration.getFullThreadDiff", input);
+  }
+
   getConfig() {
     return this.transport.request<unknown>("server.getConfig", {});
   }
