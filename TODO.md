@@ -413,9 +413,19 @@ iOS remains deferred.
       `apps/mobile/android/app/src/main/res/values/styles.xml` explicitly
       configures the Android launch splash theme. `apps/mobile/README.md`
       documents the metadata surface.
-- [ ] Restrict cleartext HTTP to paired private hosts.
+- [x] Restrict cleartext HTTP to paired private hosts.
       Acceptance: public cleartext URLs are blocked; emulator, loopback, LAN,
       VPN, and HTTPS paths behave predictably.
+      Evidence: `apps/mobile/src/client/discovery.ts` now rejects public
+      cleartext backend URLs during normalization/probing while allowing HTTPS,
+      Android emulator host, loopback, RFC1918 LAN, CGNAT/VPN, link-local, and
+      `.local` hosts. Existing auth and `/ws` client creation already flow
+      through `normalizeBackendUrl`, so blocked public HTTP cannot pair or open
+      sockets. `apps/mobile/android/app/src/main/res/xml/network_security_config.xml`
+      permits Android cleartext at the platform layer because Android cannot
+      express private CIDR ranges in XML, with app-owned URL validation as the
+      restriction boundary. Unit tests cover public HTTP rejection and private
+      host classification.
 - [ ] Add Android permissions/network config needed for LAN/VPN discovery.
       Acceptance: manifest/config includes only required permissions, with
       user-visible rationale where Android requires it.

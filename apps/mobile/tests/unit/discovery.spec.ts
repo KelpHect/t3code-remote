@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   classifyProbeError,
   generateBackendCandidates,
+  isPrivateCleartextHost,
   normalizeBackendUrl,
   probeBackendCandidate,
 } from "@/client/discovery";
@@ -19,7 +20,19 @@ describe("mobile backend discovery", () => {
     expect(normalizeBackendUrl("https://example.test:3773/path?x=1#token")).toBe(
       "https://example.test:3773",
     );
+    expect(normalizeBackendUrl("http://example.test:3773")).toBeNull();
     expect(normalizeBackendUrl("")).toBeNull();
+  });
+
+  test("limits cleartext HTTP to private network hosts", () => {
+    expect(isPrivateCleartextHost("10.0.2.2")).toBe(true);
+    expect(isPrivateCleartextHost("127.0.0.1")).toBe(true);
+    expect(isPrivateCleartextHost("192.168.1.50")).toBe(true);
+    expect(isPrivateCleartextHost("172.31.0.2")).toBe(true);
+    expect(isPrivateCleartextHost("100.64.0.5")).toBe(true);
+    expect(isPrivateCleartextHost("desktop.local")).toBe(true);
+    expect(isPrivateCleartextHost("93.184.216.34")).toBe(false);
+    expect(isPrivateCleartextHost("example.com")).toBe(false);
   });
 
   test("prioritizes the Android emulator host and removes duplicates", () => {
@@ -74,6 +87,26 @@ describe("mobile backend discovery", () => {
     });
 
     expect(result.status).toBe("invalid-response");
+  });
+
+  test("blocks public cleartext probes before fetch", async () => {
+    const result = await probeBackendCandidate(
+      {
+        id: "public-http",
+        label: "Public host",
+        source: "manual",
+        url: "http://example.test:3773",
+      },
+      {
+        fetcher: async () => {
+          throw new Error("fetch should not run");
+        },
+        now: () => 1000,
+      },
+    );
+
+    expect(result.status).toBe("blocked-cleartext");
+    expect(result.message).toContain("Public cleartext");
   });
 
   test("classifies timeout and refused probes", () => {

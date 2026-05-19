@@ -43,7 +43,7 @@ interface SessionPayload {
 const DEFAULT_PORT = "3773";
 const DEFAULT_TIMEOUT_MS = 1500;
 
-const PRIVATE_LAN_PREFIXES = ["192.168.", "10.", "172.16.", "172.17.", "172.18.", "172.19."];
+const PRIVATE_HOSTNAME_SUFFIXES = [".local"];
 
 const getWindow = () => (typeof window === "undefined" ? undefined : window);
 
@@ -56,6 +56,7 @@ export function normalizeBackendUrl(value: string): string | null {
   try {
     const url = new URL(withProtocol);
     if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    if (!isAllowedBackendUrl(url)) return null;
     url.hash = "";
     url.search = "";
     url.pathname = "";
@@ -63,6 +64,30 @@ export function normalizeBackendUrl(value: string): string | null {
   } catch {
     return null;
   }
+}
+
+export function isAllowedBackendUrl(url: URL): boolean {
+  if (url.protocol === "https:") return true;
+  if (url.protocol !== "http:") return false;
+  return isPrivateCleartextHost(url.hostname);
+}
+
+export function isPrivateCleartextHost(hostname: string): boolean {
+  const normalized = hostname.trim().toLowerCase().replace(/^\[/, "").replace(/\]$/, "");
+  if (!normalized) return false;
+  if (normalized === "localhost" || normalized === "::1") return true;
+  if (PRIVATE_HOSTNAME_SUFFIXES.some((suffix) => normalized.endsWith(suffix))) return true;
+
+  const ipv4 = parseIpv4(normalized);
+  if (!ipv4) return false;
+  const [first, second] = ipv4;
+  if (first === 10) return true;
+  if (first === 127) return true;
+  if (first === 169 && second === 254) return true;
+  if (first === 172 && second >= 16 && second <= 31) return true;
+  if (first === 192 && second === 168) return true;
+  if (first === 100 && second >= 64 && second <= 127) return true;
+  return false;
 }
 
 export function detectMobilePlatform(): MobilePlatform {
@@ -185,6 +210,17 @@ export async function probeBackendCandidate(
   candidate: BackendCandidate,
   options?: SessionProbeOptions,
 ): Promise<SessionProbeResult> {
+  const normalized = normalizeBackendUrl(candidate.url);
+  if (!normalized) {
+    return {
+      candidate,
+      status: "blocked-cleartext",
+      authenticated: false,
+      checkedAt: options?.now?.() ?? Date.now(),
+      message: "Public cleartext HTTP is blocked. Use HTTPS or a private LAN/VPN host.",
+    };
+  }
+
   const startedAt = options?.now?.() ?? Date.now();
   const fetcher = options?.fetcher ?? fetch;
   const controller = new AbortController();
@@ -238,14 +274,25 @@ export async function probeBackendCandidate(
   }
 }
 
+function parseIpv4(hostname: string): readonly [number, number, number, number] | null {
+  const parts = hostname.split(".");
+  if (parts.length !== 4) return null;
+  const octets: number[] = [];
+  for (const part of parts) {
+    if (!/^\d{1,3}$/.test(part)) return null;
+    const value = Number(part);
+    if (value < 0 || value > 255) return null;
+    octets.push(value);
+  }
+  const [first, second, third, fourth] = octets;
+  if (first === undefined || second === undefined || third === undefined || fourth === undefined) {
+    return null;
+  }
+  return [first, second, third, fourth];
+}
+
 export function isPrivateNetworkUrl(url: string) {
   const normalized = normalizeBackendUrl(url);
   if (!normalized) return false;
-  const hostname = new URL(normalized).hostname;
-  return (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname === "10.0.2.2" ||
-    PRIVATE_LAN_PREFIXES.some((prefix) => hostname.startsWith(prefix))
-  );
+  return isPrivateCleartextHost(new URL(normalized).hostname);
 }

@@ -19,7 +19,10 @@ Supported connection shape:
 - Desktop browser dev to local backend: `http://127.0.0.1:3773`
 - Real device over LAN/VPN: paired private-network backend URL
 
-Cleartext HTTP is allowed only for paired private LAN/VPN/emulator endpoints.
+Cleartext HTTP is allowed only for private endpoints: Android emulator host,
+loopback, RFC1918 LAN ranges, CGNAT/VPN ranges, link-local, and `.local`
+hostnames. Public HTTP backend URLs are rejected by the mobile client before
+fetch or WebSocket connection; public remote access must use HTTPS.
 
 ## Setup
 
