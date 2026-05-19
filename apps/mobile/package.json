@@ -18,7 +18,8 @@
     "android:gradle": "bash scripts/android-gradle.sh",
     "android:assemble:debug": "bun run build && bun run cap:sync:android && bun run android:gradle -- assembleDebug",
     "android:assemble:release": "bun run build && bun run cap:sync:android && bun run android:gradle -- assembleRelease",
-    "android:bundle:release": "bun run build && bun run cap:sync:android && bun run android:gradle -- bundleRelease"
+    "android:bundle:release": "bun run build && bun run cap:sync:android && bun run android:gradle -- bundleRelease",
+    "android:smoke": "bash scripts/android-smoke.sh"
   },
   "dependencies": {
     "@capacitor/core": "^8.3.4",

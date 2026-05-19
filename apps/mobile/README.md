@@ -75,6 +75,17 @@ bun --cwd apps/mobile android:bundle:release
 - Release APK: `apps/mobile/android/app/build/outputs/apk/release/app-release.apk`
 - Release AAB: `apps/mobile/android/app/build/outputs/bundle/release/app-release.aab`
 
+Emulator smoke:
+
+```sh
+bun --cwd apps/mobile android:smoke
+```
+
+The smoke command builds the debug APK, syncs Android, installs and launches
+`codes.t3.mobile` on the first online emulator/device, and captures launch,
+menu, actions, and composer screenshots under
+`apps/mobile/docs/screenshots/smoke-*`.
+
 Capacitor Android currently compiles Java 21 sources. The artifact scripts use
 `JAVA_HOME` when set; otherwise they try Android Studio's bundled JBR via
 `ANDROID_STUDIO_JBR` and common local Android Studio install paths.

@@ -8,6 +8,12 @@ Mobile gate:
 bun --cwd apps/mobile validate
 ```
 
+Android emulator smoke:
+
+```sh
+bun --cwd apps/mobile android:smoke
+```
+
 The wrapper expands to:
 
 ```sh
@@ -47,3 +53,6 @@ Latest evidence:
 - `bun typecheck`: passed with 14 successful tasks.
 - `TURBO_ENV_MODE=loose LANG=C LC_ALL=C LANGUAGE=C bun run test`: passed with
   123 files passed, 1 skipped, 1022 tests passed, and 4 skipped.
+- `bun --cwd apps/mobile android:smoke`: passed on `emulator-5554` and wrote
+  launch, menu, actions, and composer screenshots to
+  `apps/mobile/docs/screenshots/smoke-20260519-130828`.

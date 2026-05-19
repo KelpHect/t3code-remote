@@ -484,9 +484,16 @@ validation may run existing checks; implementation stays mobile-only.
       warnings, Ionic/lightningcss build warnings, and latest passing root test
       counts. Verified with `bun fmt`, `bun lint`, `bun typecheck`, and
       `TURBO_ENV_MODE=loose LANG=C LC_ALL=C LANGUAGE=C bun run test`.
-- [ ] Add emulator install/launch/screenshot smoke script.
+- [x] Add emulator install/launch/screenshot smoke script.
       Acceptance: one documented command builds/syncs/installs/launches and
       captures screenshots for the key mobile screens.
+      Evidence: `apps/mobile/package.json` exposes
+      `bun --cwd apps/mobile android:smoke`. The script builds the debug APK,
+      syncs Android, installs and launches `codes.t3.mobile` on the selected
+      emulator/device, and captures launch, menu, actions, and composer
+      screenshots under `apps/mobile/docs/screenshots/smoke-*`. Generated
+      screenshots are ignored by git. Verified on `emulator-5554` with
+      screenshots in `apps/mobile/docs/screenshots/smoke-20260519-130828`.
 
 ## Deferred / Future Work
 
