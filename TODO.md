@@ -379,9 +379,19 @@ change backend behavior.
       placeholder with path browsing, add-project, repository lookup, clone+add,
       and permission/clone error states. Unit tests cover browse/result mapping,
       clone mapping, URL detection, title inference, and project-create payloads.
-- [ ] Add terminal scrollback and input.
+- [x] Add terminal scrollback and input.
       Acceptance: open/write/resize/clear/restart/close work for selected
       thread/project; output is bounded or virtualized.
+      Evidence: `apps/mobile/src/client/ws/existingBackendClient.ts` wraps
+      existing `terminal.open`, `terminal.write`, `terminal.resize`,
+      `terminal.clear`, `terminal.restart`, `terminal.close`, and
+      `subscribeTerminalEvents`, `apps/mobile/src/client/mobileTerminal.ts`
+      maps snapshots/events, filters subscription events by selected
+      thread/default terminal, and bounds scrollback to 80k characters, and
+      `apps/mobile/src/views/ChatPage.vue` replaces the terminal placeholder
+      with open/clear/restart/close controls, streamed scrollback, input send,
+      resize-on-subscribe, and error states. Unit tests cover snapshot/event
+      mapping, reducer behavior, and scrollback bounding.
 
 ## P5 - Mobile Platform Hardening
 

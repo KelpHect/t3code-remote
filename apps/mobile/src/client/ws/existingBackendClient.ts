@@ -94,6 +94,40 @@ export class ExistingBackendClient {
     return this.transport.request<unknown>("sourceControl.cloneRepository", input);
   }
 
+  terminalOpen(input: Record<string, unknown>) {
+    return this.transport.request<unknown>("terminal.open", input);
+  }
+
+  terminalWrite(input: Record<string, unknown>) {
+    return this.transport.request<unknown>("terminal.write", input);
+  }
+
+  terminalResize(input: Record<string, unknown>) {
+    return this.transport.request<unknown>("terminal.resize", input);
+  }
+
+  terminalClear(input: Record<string, unknown>) {
+    return this.transport.request<unknown>("terminal.clear", input);
+  }
+
+  terminalRestart(input: Record<string, unknown>) {
+    return this.transport.request<unknown>("terminal.restart", input);
+  }
+
+  terminalClose(input: Record<string, unknown>) {
+    return this.transport.request<unknown>("terminal.close", input);
+  }
+
+  subscribeTerminalEvents(
+    listener: (item: unknown) => void,
+    options?: { readonly onError?: () => void },
+  ) {
+    return this.transport.subscribe("subscribeTerminalEvents", {}, listener, {
+      onComplete: options?.onError,
+      onError: options?.onError,
+    });
+  }
+
   getConfig() {
     return this.transport.request<unknown>("server.getConfig", {});
   }

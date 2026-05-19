@@ -521,16 +521,71 @@
         </section>
 
         <section v-else-if="activeTool === 'terminal'" class="tool-workspace">
-          <pre class="terminal-preview"><code>$ bun --cwd apps/mobile build
-✓ vue-tsc --noEmit
-✓ vite build
-$ capacitor sync android
-✓ copied web assets
-$ adb install -r app-debug.apk
-Success</code></pre>
+          <div class="terminal-toolbar">
+            <div>
+              <p class="eyebrow">Desktop terminal</p>
+              <h2>{{ terminalTitle }}</h2>
+              <p>{{ terminalStatusText }}</p>
+            </div>
+            <ion-spinner v-if="terminalLoading" name="crescent" />
+          </div>
+          <div class="terminal-actions">
+            <ion-button
+              size="small"
+              shape="round"
+              :disabled="!canOpenTerminal"
+              @click="openTerminalSession"
+            >
+              Open
+            </ion-button>
+            <ion-button
+              fill="outline"
+              size="small"
+              shape="round"
+              :disabled="!canUseTerminal"
+              @click="clearTerminalSession"
+            >
+              Clear
+            </ion-button>
+            <ion-button
+              fill="outline"
+              size="small"
+              shape="round"
+              :disabled="!canOpenTerminal"
+              @click="restartTerminalSession"
+            >
+              Restart
+            </ion-button>
+            <ion-button
+              fill="outline"
+              size="small"
+              shape="round"
+              :disabled="!canUseTerminal"
+              @click="closeTerminalSession"
+            >
+              Close
+            </ion-button>
+          </div>
+          <p v-if="terminalError" class="command-error" role="alert">{{ terminalError }}</p>
+          <pre class="terminal-preview"><code>{{ terminalScrollback }}</code></pre>
           <div class="terminal-input">
             <span>$</span>
-            <p>Type command after backend terminal support is connected.</p>
+            <ion-input
+              aria-label="Terminal input"
+              :disabled="!canUseTerminal"
+              placeholder="Type a command"
+              :value="terminalInput"
+              @ionInput="onTerminalInput"
+              @keyup.enter="sendTerminalInput"
+            />
+            <ion-button
+              size="small"
+              shape="round"
+              :disabled="!canUseTerminal || !terminalInput.trim()"
+              @click="sendTerminalInput"
+            >
+              Send
+            </ion-button>
           </div>
         </section>
 
@@ -653,6 +708,21 @@ import {
   type MobileGitStatus,
 } from "@/client/mobileGit";
 import {
+  clearMobileTerminal,
+  closeMobileTerminal,
+  createEmptyMobileTerminalState,
+  DEFAULT_MOBILE_TERMINAL_ID,
+  MOBILE_TERMINAL_COLS,
+  MOBILE_TERMINAL_ROWS,
+  openMobileTerminal,
+  reduceMobileTerminalState,
+  resizeMobileTerminal,
+  restartMobileTerminal,
+  startMobileTerminalSubscription,
+  writeMobileTerminal,
+  type MobileTerminalState,
+} from "@/client/mobileTerminal";
+import {
   formatMobileModelSelection,
   loadMobileModelChoices,
   mobileInteractionModeOptions,
@@ -714,7 +784,7 @@ const toolDetails: Record<ToolId, { title: string; entries: readonly string[]; n
   terminal: {
     title: "Terminal",
     entries: ["Open terminal", "Scrollback", "Input", "Resize"],
-    note: "Terminal sessions will be backend-owned and streamed into this sheet.",
+    note: "Terminal sessions are backend-owned and streamed into this sheet.",
   },
   approvals: {
     title: "Approvals",
@@ -760,7 +830,12 @@ const filesError = ref<string | null>(null);
 const cloneRepositoryInput = ref("");
 const cloneDestinationInput = ref("");
 const cloneRepositoryInfo = ref<MobileRepositoryInfo | null>(null);
+const terminalState = ref<MobileTerminalState>(createEmptyMobileTerminalState());
+const terminalInput = ref("");
+const terminalLoading = ref(false);
+const terminalError = ref<string | null>(null);
 let stopGitStatusSubscription: (() => void) | null = null;
+let stopTerminalSubscription: (() => void) | null = null;
 const messages = computed(() => visibleMessages.value);
 
 const activeDraftRef = computed<ComposerDraftRef>(() => ({
@@ -945,6 +1020,45 @@ const filesStatusText = computed(() => {
   }
   return "Browse a path, add it as a project, or clone a repository.";
 });
+const terminalCwd = computed(
+  () => activeThread.value?.worktreePath ?? activeProject.value?.workspaceRoot ?? null,
+);
+const terminalThreadId = computed(() => activeThread.value?.id ?? null);
+const terminalTitle = computed(() => {
+  if (!terminalThreadId.value) return "No thread selected";
+  if (!terminalCwd.value) return "No worktree path";
+  if (terminalState.value.status === "idle") return terminalCwd.value;
+  return `${terminalState.value.status} · ${terminalState.value.cwd || terminalCwd.value}`;
+});
+const terminalStatusText = computed(() => {
+  if (!commandSession.value) return "Pair with a backend to open a desktop terminal.";
+  if (!terminalThreadId.value || !terminalCwd.value) {
+    return "Select a synced project thread with a workspace path.";
+  }
+  if (terminalLoading.value) return "Working on the desktop backend.";
+  if (terminalError.value) return terminalError.value;
+  if (terminalState.value.status === "idle") return "Open the default terminal for this thread.";
+  if (terminalState.value.status === "exited") {
+    return `Terminal exited with code ${terminalState.value.exitCode ?? "unknown"}.`;
+  }
+  if (terminalState.value.hasRunningSubprocess) return "A subprocess is running.";
+  return `Terminal ${terminalState.value.status}.`;
+});
+const terminalScrollback = computed(() =>
+  terminalState.value.history.trim().length > 0
+    ? terminalState.value.history
+    : "No terminal output yet.",
+);
+const canOpenTerminal = computed(
+  () =>
+    Boolean(commandSession.value && terminalThreadId.value && terminalCwd.value) &&
+    !terminalLoading.value,
+);
+const canUseTerminal = computed(
+  () =>
+    canOpenTerminal.value &&
+    (terminalState.value.status === "running" || terminalState.value.status === "starting"),
+);
 
 const activeToolDetails = computed(() => {
   if (!activeTool.value) {
@@ -982,6 +1096,7 @@ const openTool = (tool: ToolId) => {
   if (tool === "diff") void loadFullThreadDiff();
   if (tool === "git") void startGitTool();
   if (tool === "files") initializeFilesTool();
+  if (tool === "terminal") void startTerminalTool();
 };
 
 const sendComposerMessage = async () => {
@@ -1422,6 +1537,183 @@ const addProjectForWorkspace = async (workspaceRoot: string) => {
   });
 };
 
+const onTerminalInput = (event: { detail: { value?: string | null } }) => {
+  terminalInput.value = event.detail.value ?? "";
+};
+
+const startTerminalTool = async () => {
+  stopTerminalTool();
+  terminalError.value = null;
+  const session = commandSession.value;
+  const threadId = terminalThreadId.value;
+  const cwd = terminalCwd.value;
+  if (!session || !threadId || !cwd) {
+    terminalState.value = createEmptyMobileTerminalState(threadId ?? "");
+    terminalError.value = "Select a paired project thread before opening terminal.";
+    return;
+  }
+  terminalState.value = createEmptyMobileTerminalState(threadId, DEFAULT_MOBILE_TERMINAL_ID);
+  try {
+    stopTerminalSubscription = await startMobileTerminalSubscription({
+      onError: (error) => {
+        terminalError.value = error.message;
+      },
+      onEvent: (event) => {
+        terminalState.value = reduceMobileTerminalState(terminalState.value, event);
+        terminalError.value = null;
+      },
+      session,
+      terminalId: DEFAULT_MOBILE_TERMINAL_ID,
+      threadId,
+    });
+    await resizeTerminalSession();
+  } catch (error) {
+    terminalError.value = error instanceof Error ? error.message : "Terminal stream failed.";
+  }
+};
+
+const openTerminalSession = async () => {
+  const context = resolveTerminalContext();
+  if (!context) return;
+  terminalLoading.value = true;
+  terminalError.value = null;
+  try {
+    terminalState.value = await openMobileTerminal({
+      cols: MOBILE_TERMINAL_COLS,
+      cwd: context.cwd,
+      rows: MOBILE_TERMINAL_ROWS,
+      session: context.session,
+      terminalId: DEFAULT_MOBILE_TERMINAL_ID,
+      threadId: context.threadId,
+      worktreePath: activeThread.value?.worktreePath,
+    });
+    if (!stopTerminalSubscription) await startTerminalTool();
+  } catch (error) {
+    terminalError.value = error instanceof Error ? error.message : "Terminal open failed.";
+  } finally {
+    terminalLoading.value = false;
+  }
+};
+
+const sendTerminalInput = async () => {
+  const context = resolveTerminalContext();
+  const command = terminalInput.value;
+  if (!context || !command.trim()) return;
+  terminalLoading.value = true;
+  terminalError.value = null;
+  try {
+    await writeMobileTerminal({
+      data: `${command}\r`,
+      session: context.session,
+      terminalId: DEFAULT_MOBILE_TERMINAL_ID,
+      threadId: context.threadId,
+    });
+    terminalInput.value = "";
+  } catch (error) {
+    terminalError.value = error instanceof Error ? error.message : "Terminal write failed.";
+  } finally {
+    terminalLoading.value = false;
+  }
+};
+
+const resizeTerminalSession = async () => {
+  const context = resolveTerminalContext({ silent: true });
+  if (!context) return;
+  try {
+    await resizeMobileTerminal({
+      cols: MOBILE_TERMINAL_COLS,
+      rows: MOBILE_TERMINAL_ROWS,
+      session: context.session,
+      terminalId: DEFAULT_MOBILE_TERMINAL_ID,
+      threadId: context.threadId,
+    });
+  } catch {
+    // Resize can fail before the session exists; open/restart remains the visible recovery path.
+  }
+};
+
+const clearTerminalSession = async () => {
+  const context = resolveTerminalContext();
+  if (!context) return;
+  terminalLoading.value = true;
+  terminalError.value = null;
+  try {
+    await clearMobileTerminal({
+      session: context.session,
+      terminalId: DEFAULT_MOBILE_TERMINAL_ID,
+      threadId: context.threadId,
+    });
+    terminalState.value = { ...terminalState.value, history: "" };
+  } catch (error) {
+    terminalError.value = error instanceof Error ? error.message : "Terminal clear failed.";
+  } finally {
+    terminalLoading.value = false;
+  }
+};
+
+const restartTerminalSession = async () => {
+  const context = resolveTerminalContext();
+  if (!context) return;
+  terminalLoading.value = true;
+  terminalError.value = null;
+  try {
+    terminalState.value = await restartMobileTerminal({
+      cols: MOBILE_TERMINAL_COLS,
+      cwd: context.cwd,
+      rows: MOBILE_TERMINAL_ROWS,
+      session: context.session,
+      terminalId: DEFAULT_MOBILE_TERMINAL_ID,
+      threadId: context.threadId,
+      worktreePath: activeThread.value?.worktreePath,
+    });
+    if (!stopTerminalSubscription) await startTerminalTool();
+  } catch (error) {
+    terminalError.value = error instanceof Error ? error.message : "Terminal restart failed.";
+  } finally {
+    terminalLoading.value = false;
+  }
+};
+
+const closeTerminalSession = async () => {
+  const context = resolveTerminalContext();
+  if (!context) return;
+  terminalLoading.value = true;
+  terminalError.value = null;
+  try {
+    await closeMobileTerminal({
+      session: context.session,
+      terminalId: DEFAULT_MOBILE_TERMINAL_ID,
+      threadId: context.threadId,
+    });
+    terminalState.value = createEmptyMobileTerminalState(
+      context.threadId,
+      DEFAULT_MOBILE_TERMINAL_ID,
+    );
+  } catch (error) {
+    terminalError.value = error instanceof Error ? error.message : "Terminal close failed.";
+  } finally {
+    terminalLoading.value = false;
+  }
+};
+
+const stopTerminalTool = () => {
+  stopTerminalSubscription?.();
+  stopTerminalSubscription = null;
+};
+
+const resolveTerminalContext = (options?: { readonly silent?: boolean }) => {
+  const session = commandSession.value;
+  const threadId = terminalThreadId.value;
+  const cwd = terminalCwd.value;
+  if (!session || !threadId || !cwd) {
+    if (!options?.silent) {
+      terminalError.value = "Select a paired project thread before using terminal.";
+    }
+    return null;
+  }
+  return { cwd, session, threadId };
+};
+
 const applyModelSelection = async (selection: MobileModelSelection) => {
   if (sameMobileModelSelection(selection, activeModelSelection.value)) return;
   draftModelSelection.value = selection;
@@ -1584,6 +1876,10 @@ watch(
     gitProgress.value = [];
     gitError.value = null;
     stopGitTool();
+    terminalState.value = createEmptyMobileTerminalState(activeThreadId.value ?? "");
+    terminalInput.value = "";
+    terminalError.value = null;
+    stopTerminalTool();
     commandError.value = null;
   },
 );
@@ -1611,6 +1907,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   stopThreadSync();
   stopGitTool();
+  stopTerminalTool();
   flushComposerDraft();
   if (typeof globalThis.document === "undefined") return;
   globalThis.document.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -2130,7 +2427,8 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 
 .diff-toolbar,
 .files-toolbar,
-.git-toolbar {
+.git-toolbar,
+.terminal-toolbar {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -2146,20 +2444,24 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 .files-toolbar h2,
 .files-toolbar p,
 .git-toolbar h2,
-.git-toolbar p {
+.git-toolbar p,
+.terminal-toolbar h2,
+.terminal-toolbar p {
   margin: 0;
 }
 
 .diff-toolbar h2,
 .files-toolbar h2,
-.git-toolbar h2 {
+.git-toolbar h2,
+.terminal-toolbar h2 {
   font-size: 1.25rem;
   line-height: 1.2;
 }
 
 .diff-toolbar p:not(.eyebrow),
 .files-toolbar p:not(.eyebrow),
-.git-toolbar p:not(.eyebrow) {
+.git-toolbar p:not(.eyebrow),
+.terminal-toolbar p:not(.eyebrow) {
   color: var(--ion-color-medium);
   line-height: 1.45;
 }
@@ -2167,7 +2469,8 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 .diff-actions,
 .diff-file-list,
 .git-actions,
-.path-controls {
+.path-controls,
+.terminal-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -2175,7 +2478,8 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 }
 
 .diff-actions ion-button,
-.git-actions ion-button {
+.git-actions ion-button,
+.terminal-actions ion-button {
   margin: 0;
 }
 
@@ -2341,10 +2645,20 @@ function isModelSelection(value: unknown): value is MobileModelSelection {
 
 .terminal-input {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
-.terminal-input p {
+.terminal-input ion-input {
+  --background: transparent;
+  --padding-bottom: 0;
+  --padding-end: 0;
+  --padding-start: 0;
+  --padding-top: 0;
+  min-height: 1.75rem;
+}
+
+.terminal-input ion-button {
   margin: 0;
 }
 
