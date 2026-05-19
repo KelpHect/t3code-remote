@@ -4,11 +4,13 @@ android {
     namespace = "codes.t3.mobile"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
+        // Keep release identity explicit for mobile packaging; update these values
+        // through a dedicated release task instead of relying on scaffold defaults.
         applicationId "codes.t3.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "0.0.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

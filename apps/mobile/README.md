@@ -42,7 +42,14 @@ bun --cwd apps/mobile build
 bun --cwd apps/mobile cap:sync:android
 ```
 
-Android uses Capacitor package id `codes.t3.mobile` and display name `T3 Code`.
+Android package metadata is explicit:
+
+- Package id/application id: `codes.t3.mobile`
+- Display name/activity title: `T3 Code`
+- Version: `0.0.1` / Android `versionCode` `1`
+- Launcher icon: Android resources under `android/app/src/main/res/mipmap-*`
+- Splash: Android 12 splash style in `android/app/src/main/res/values/styles.xml`
+  with the generated splash images under `android/app/src/main/res/drawable-*`
 
 ## Validation
 

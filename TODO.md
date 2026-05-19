@@ -401,9 +401,18 @@ iOS remains deferred.
 
 ### Android
 
-- [ ] Configure Capacitor Android package metadata.
+- [x] Configure Capacitor Android package metadata.
       Acceptance: package id, display name, version name/code, app icon, and
       splash behavior are explicit.
+      Evidence: `apps/mobile/capacitor.config.ts` sets package id
+      `codes.t3.mobile` and display name `T3 Code`,
+      `apps/mobile/android/app/build.gradle` pins application id, version name
+      `0.0.1`, and version code `1`, Android string resources name the app and
+      activity, launcher icons are generated under `android/app/src/main/res/mipmap-*`,
+      splash resources live under `android/app/src/main/res/drawable-*`, and
+      `apps/mobile/android/app/src/main/res/values/styles.xml` explicitly
+      configures the Android launch splash theme. `apps/mobile/README.md`
+      documents the metadata surface.
 - [ ] Restrict cleartext HTTP to paired private hosts.
       Acceptance: public cleartext URLs are blocked; emulator, loopback, LAN,
       VPN, and HTTPS paths behave predictably.
